@@ -328,9 +328,7 @@ private fun SearchResultGrid(
     }
     PrefetchPixivImages(prefetchUrls, enabled = state.settings.prefetchImages)
 
-    val gridState = rememberSaveable(page, saver = LazyGridState.Saver) {
-        LazyGridState()
-    }
+    val gridState = viewModel.searchResultGridState
     LazyVerticalGrid(
         state = gridState,
         columns = GridCells.Fixed(if (page == 0) adaptiveIllustColumns(state.settings) else 1),
@@ -404,7 +402,7 @@ private fun BrowseArea(
     PrefetchPixivImages(browsePrefetchUrls, enabled = state.settings.prefetchImages)
 
     LazyVerticalGrid(
-        state = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() },
+        state = viewModel.searchBrowseGridState,
         columns = GridCells.Fixed(2),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = MainNavigationContentPadding),

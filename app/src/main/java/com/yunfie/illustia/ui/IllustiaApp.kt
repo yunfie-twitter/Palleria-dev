@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Alignment
@@ -240,12 +241,29 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
         }
     }
 
-    LaunchedEffect(state.showUserPage, state.selectedUser?.id) {
-        if (state.showUserPage && state.selectedUser != null) {
-            navigate(AppRoute.UserProfile)
-        } else if (!state.showUserPage && backStack.lastOrNull() == AppRoute.UserProfile) {
-            backStack.removeAt(backStack.lastIndex)
+    LaunchedEffect(state.showUserPage) {
+        if (state.showUserPage) {
+            if (backStack.lastOrNull() != AppRoute.UserProfile) {
+                backStack.add(AppRoute.UserProfile)
+            }
+        } else {
+            if (backStack.lastOrNull() == AppRoute.UserProfile) {
+                backStack.removeAt(backStack.lastIndex)
+            }
         }
+    }
+
+    // UserProfile ルートがバックスタックから削除されたら遅延クリーンアップ
+    LaunchedEffect(Unit) {
+        snapshotFlow { AppRoute.UserProfile in backStack }
+            .collect { hasUserProfile ->
+                if (!hasUserProfile) {
+                    delay(350)
+                    if (AppRoute.UserProfile !in backStack) {
+                        viewModel.closeUser()
+                    }
+                }
+            }
     }
 
     val preferLowDataImages = remember(context) { context.isActiveNetworkMetered() }
@@ -435,12 +453,8 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                 )
             }
             entry(AppRoute.UserProfile) {
-                state.selectedUser?.let { user ->
-                    val userBackAction = if (state.userPageFromSheet) {
-                        viewModel::collapseUserPageToSheet
-                    } else {
-                        viewModel::closeUserPage
-                    }
+                if (state.selectedUser != null) {
+                    val user = state.selectedUser!!
                     UserProfileScreen(
                         user = user,
                         settings = state.settings,
@@ -448,13 +462,15 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                         bookmarks = state.selectedUserBookmarks,
                         hasMore = state.selectedUserNextUrl != null,
                         bookmarkHasMore = state.selectedUserBookmarksNextUrl != null,
-                        onBack = userBackAction,
-                        onOpenIllust = { illust ->
+                        onBack = {
                             if (state.userPageFromSheet) {
                                 viewModel.collapseUserPageToSheet()
                             } else {
-                                viewModel.closeUserPage()
+                                viewModel.hideUserPage()
+                                popRoute()
                             }
+                        },
+                        onOpenIllust = { illust ->
                             viewModel.openIllust(illust)
                         },
                         onBookmark = viewModel::toggleBookmark,
@@ -467,6 +483,15 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                         onUnmuteUser = { viewModel.unmuteUser(user.id) },
                         showHeaderControls = true,
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MiuixTheme.colorScheme.surface),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        LoadingIndicator()
+                    }
                 }
             }
         }
@@ -568,7 +593,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
         }
 
         state.selectedUser?.let { user ->
-            if (!state.showUserPage) {
+            if (!state.showUserPage && !state.userPageDismissed) {
                 val userSheetBackground = LocalBottomSheetBackgroundColor.current
                 val userSheetHeight = minOf(configuration.screenHeightDp.dp * 0.68f, 560.dp)
                 WindowBottomSheet(

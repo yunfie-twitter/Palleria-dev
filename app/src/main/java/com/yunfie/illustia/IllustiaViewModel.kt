@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Base64
 import androidx.annotation.Keep
 import androidx.compose.runtime.Immutable
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yunfie.illustia.nativebridge.NativeIntentEvent
@@ -67,6 +68,16 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     private var searchJob: Job? = null
     private var detailExtrasJob: Job? = null
     private var loadingJob: Job? = null
+    private var closeUserPageJob: Job? = null
+
+    val bookmarkTimelineGridState = LazyGridState()
+    val bookmarkMainGridState = LazyGridState()
+    val bookmarkFollowingGridState = LazyGridState()
+    val homeFeedGridState = LazyGridState()
+    val homeTimelineGridState = LazyGridState()
+    val searchResultGridState = LazyGridState()
+    val searchBrowseGridState = LazyGridState()
+    val rankingGridState = LazyGridState()
     private val downloadClient: OkHttpClient by lazy {
         (getApplication<Application>() as IllustiaApplication).sharedHttpClient.newBuilder()
             .readTimeout(30, TimeUnit.SECONDS)
@@ -133,6 +144,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 watchlistNextUrl = it.watchlistNextUrl,
                 activeWatchlistTag = it.activeWatchlistTag,
                 followingUsersNextUrl = it.followingUsersNextUrl,
+                selectedTab = it.bookmarkSelectedTab,
             )
         }
         .distinctUntilChanged()
@@ -289,6 +301,10 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateRestrict(value: Restrict) {
         updateSettings { it.copy(bookmarkRestrict = value) }
+    }
+
+    fun updateBookmarkSelectedTab(index: Int) {
+        _uiState.update { it.copy(bookmarkSelectedTab = index) }
     }
 
     fun updateSearchSort(value: SearchSort) {
@@ -852,6 +868,8 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openUser(userId: Long) {
+        closeUserPageJob?.cancel()
+        closeUserPageJob = null
         if (userId <= 0L) {
             _uiState.update { it.copy(message = str(R.string.error_load_artist_failed)) }
             return
@@ -868,12 +886,15 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     selectedUserBookmarksNextUrl = null,
                     showUserPage = false,
                     userPageFromSheet = false,
+                    userPageDismissed = false,
                 )
             }
         }
     }
 
     fun closeUser() {
+        closeUserPageJob?.cancel()
+        closeUserPageJob = null
         _uiState.update {
             it.copy(
                 selectedUser = null,
@@ -883,6 +904,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 selectedUserBookmarksNextUrl = null,
                 showUserPage = false,
                 userPageFromSheet = false,
+                userPageDismissed = true,
             )
         }
     }
@@ -892,38 +914,74 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openUserPage(userId: Long) {
+        closeUserPageJob?.cancel()
+        closeUserPageJob = null
         if (userId <= 0L) {
             _uiState.update { it.copy(message = str(R.string.error_load_artist_failed)) }
             return
         }
-        runLoading {
-            val profile = repository.userDetail(userId)
-            val page = repository.userIllusts(userId)
-            _uiState.update {
-                it.copy(
-                    selectedUser = profile,
-                    selectedUserIllusts = page.items.visibleWithSettings(it.settings),
-                    selectedUserNextUrl = page.nextUrl,
-                    selectedUserBookmarks = emptyList(),
-                    selectedUserBookmarksNextUrl = null,
-                    showUserPage = true,
-                    userPageFromSheet = false,
-                )
-            }
-        }
-    }
-
-    fun closeUserPage() {
         _uiState.update {
             it.copy(
-                showUserPage = false,
-                userPageFromSheet = false,
                 selectedUser = null,
                 selectedUserIllusts = emptyList(),
                 selectedUserNextUrl = null,
                 selectedUserBookmarks = emptyList(),
                 selectedUserBookmarksNextUrl = null,
+                showUserPage = true,
+                userPageFromSheet = false,
+                userPageDismissed = false,
             )
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val profile = repository.userDetail(userId)
+                val page = repository.userIllusts(userId)
+                _uiState.update {
+                    it.copy(
+                        selectedUser = profile,
+                        selectedUserIllusts = page.items.visibleWithSettings(it.settings),
+                        selectedUserNextUrl = page.nextUrl,
+                        selectedUserBookmarks = emptyList(),
+                        selectedUserBookmarksNextUrl = null,
+                    )
+                }
+            } catch (error: Throwable) {
+                if (isCancellation(error)) throw error
+                if (handleAuthExpired(error)) return@launch
+                _uiState.update { it.copy(message = str(R.string.error_load_artist_failed)) }
+            }
+        }
+    }
+
+    fun hideUserPage() {
+        closeUserPageJob?.cancel()
+        _uiState.update {
+            it.copy(userPageDismissed = true)
+        }
+    }
+
+    fun closeUserPage() {
+        closeUserPageJob?.cancel()
+        _uiState.update {
+            it.copy(
+                showUserPage = false,
+                userPageFromSheet = false,
+                userPageDismissed = true,
+            )
+        }
+        closeUserPageJob = viewModelScope.launch {
+            delay(350)
+            _uiState.update {
+                it.copy(
+                    selectedUser = null,
+                    selectedUserIllusts = emptyList(),
+                    selectedUserNextUrl = null,
+                    selectedUserBookmarks = emptyList(),
+                    selectedUserBookmarksNextUrl = null,
+                    userPageDismissed = false,
+                )
+            }
+            closeUserPageJob = null
         }
     }
 
@@ -936,6 +994,8 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun expandUserSheetToPage() {
+        closeUserPageJob?.cancel()
+        closeUserPageJob = null
         _uiState.update { it.copy(showUserPage = true, userPageFromSheet = true) }
     }
 

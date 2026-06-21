@@ -66,16 +66,17 @@ fun BookmarkScreen(
     chrome: BookmarkChromeState,
     viewModel: IllustiaViewModel,
 ) {
-    var selectedTopTab by rememberSaveable { mutableStateOf(1) }
+    var selectedTopTab by remember(chrome.selectedTab) { mutableStateOf(chrome.selectedTab) }
     var followingUserSort by rememberSaveable { mutableStateOf(FollowingUserSort.Newest) }
     val coroutineScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(
-        initialPage = selectedTopTab,
+        initialPage = chrome.selectedTab,
         pageCount = { 3 },
     )
 
     LaunchedEffect(pagerState.currentPage) {
         selectedTopTab = pagerState.currentPage
+        viewModel.updateBookmarkSelectedTab(pagerState.currentPage)
     }
 
     val feedHighQuality = remember(settings.highQualityImages, settings.feedPreviewQuality) {
@@ -226,7 +227,7 @@ private fun BookmarkMainTab(
     chrome: BookmarkChromeState,
     scrollBehavior: ScrollBehavior = MiuixScrollBehavior(),
 ) {
-    val gridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
+    val gridState = viewModel.bookmarkMainGridState
     PullToRefresh(
         isRefreshing = loadState == LoadState.Loading && bookmarkItems.isNotEmpty(),
         onRefresh = { viewModel.refreshBookmarks() },
@@ -273,7 +274,7 @@ private fun BookmarkTimelineTab(
     chrome: BookmarkChromeState,
     scrollBehavior: ScrollBehavior = MiuixScrollBehavior(),
 ) {
-    val gridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
+    val gridState = viewModel.bookmarkTimelineGridState
     PullToRefresh(
         isRefreshing = loadState == LoadState.Loading && timelineItems.isNotEmpty(),
         onRefresh = { viewModel.refreshTimeline() },
@@ -317,7 +318,7 @@ private fun BookmarkFollowingTab(
     viewModel: IllustiaViewModel,
     chrome: BookmarkChromeState,
 ) {
-    val gridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
+    val gridState = viewModel.bookmarkFollowingGridState
     val sortedUsers = remember(followingUsers, sort) {
         when (sort) {
             FollowingUserSort.Newest -> followingUsers

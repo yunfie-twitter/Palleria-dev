@@ -27,6 +27,10 @@
     @kotlinx.serialization.Serializable *;
 }
 
+# Tink / Security-Crypto
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn com.google.j2objc.annotations.**
+
 # Illustia Models (Need to keep for serialization)
 -keep class com.yunfie.illustia.data.** { *; }
 -keepclassmembers class com.yunfie.illustia.data.** { *; }

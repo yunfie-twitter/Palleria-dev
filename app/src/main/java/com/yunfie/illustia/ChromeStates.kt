@@ -19,6 +19,7 @@ data class BookmarkChromeState(
     val watchlistNextUrl: String? = null,
     val activeWatchlistTag: String? = null,
     val followingUsersNextUrl: String? = null,
+    val selectedTab: Int = 1,
 )
 
 data class PixivWebLoginRequest(

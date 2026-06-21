@@ -43,6 +43,7 @@ import com.yunfie.illustia.ui.components.PixivImage
 import com.yunfie.illustia.ui.components.PredictiveBackGestureHandler
 import com.yunfie.illustia.ui.components.SettingRow
 import com.yunfie.illustia.ui.components.adaptiveIllustColumns
+import com.yunfie.illustia.ui.components.horizontalPadding
 import com.yunfie.illustia.ui.components.miuixClickable
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -170,14 +171,14 @@ private fun UserProfileHeader(
     onBack: () -> Unit,
     onMuteUser: () -> Unit
 ) {
-    val bannerWidth = LocalConfiguration.current.screenWidthDp.dp
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .requiredWidth(bannerWidth)
+            .requiredWidth(screenWidth + 28.dp)
             .offset(x = (-14).dp)
             .height(180.dp)
-            .background(MiuixTheme.colorScheme.surfaceContainer),
+            .background(MiuixTheme.colorScheme.surfaceContainerHigh),
     ) {
         if (user.backgroundImageUrl != null) {
             PixivImage(

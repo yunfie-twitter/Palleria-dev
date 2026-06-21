@@ -161,9 +161,7 @@ private fun FeedTabContent(
         settings.highQualityImages && settings.feedPreviewQuality != "low"
     }
     val showAiBadge = remember(settings.showAiBadge) { settings.showAiBadge }
-    val gridState = rememberSaveable(saver = LazyGridState.Saver) {
-        LazyGridState()
-    }
+    val gridState = viewModel.homeFeedGridState
     val prefetchUrls = remember(items, feedHighQuality) {
         items.asSequence()
             .take(16)
@@ -247,9 +245,7 @@ private fun FollowingTabContent(
         settings.highQualityImages && settings.feedPreviewQuality != "low"
     }
     val showAiBadge = remember(settings.showAiBadge) { settings.showAiBadge }
-    val gridState = rememberSaveable(saver = LazyGridState.Saver) {
-        LazyGridState()
-    }
+    val gridState = viewModel.homeTimelineGridState
     val prefetchUrls = remember(items, feedHighQuality) {
         items.asSequence()
             .take(16)

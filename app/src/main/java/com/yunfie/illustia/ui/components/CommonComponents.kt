@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -268,6 +269,14 @@ fun adaptiveIllustColumns(settings: AppSettings): Int {
         }
     }
     return columns
+}
+
+fun Modifier.horizontalPadding(padding: Dp): Modifier = layout { measurable, constraints ->
+    val paddingPx = padding.roundToPx()
+    val placeable = measurable.measure(constraints.copy(maxWidth = constraints.maxWidth - paddingPx * 2))
+    layout(placeable.width, placeable.height) {
+        placeable.place(paddingPx, 0)
+    }
 }
 
 @Composable

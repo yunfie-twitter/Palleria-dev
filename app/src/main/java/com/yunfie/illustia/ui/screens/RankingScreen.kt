@@ -192,9 +192,7 @@ private fun RankingGridContent(
         settings.highQualityImages && settings.feedPreviewQuality != "low"
     }
     val showAiBadge = remember(settings.showAiBadge) { settings.showAiBadge }
-    val gridState = rememberSaveable(mode, saver = LazyGridState.Saver) {
-        LazyGridState()
-    }
+    val gridState = viewModel.rankingGridState
     val prefetchUrls = remember(items, feedHighQuality) {
         items.map { if (feedHighQuality) it.previewUrl else it.thumbnailUrl }
     }
