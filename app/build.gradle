@@ -51,9 +51,12 @@ android {
     }
 }
 
-android.applicationVariants.all { variant ->
-    variant.outputs.all {
-        outputFileName = "Illustia-v${variant.versionName}-${variant.name}.apk"
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs.forEach { output ->
+            def name = "Illustia-v${android.defaultConfig.versionName}-${variant.name}.apk"
+            output.outputFileName.set(name)
+        }
     }
 }
 
