@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -35,7 +36,6 @@ import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 
-private const val APP_VERSION = "1.0.0"
 private const val GITHUB_URL = "https://github.com/"
 
 @Composable
@@ -44,6 +44,13 @@ fun AboutScreen(
 ) {
     PredictiveBackGestureHandler(onBack = onBack)
     val context = LocalContext.current
+    val appVersion = remember {
+        runCatching {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.versionName
+        }.getOrNull() ?: "1.0.0"
+    }
+
     val scrollBehavior = MiuixScrollBehavior()
     Scaffold(
         containerColor = MiuixTheme.colorScheme.surface,
@@ -91,7 +98,7 @@ fun AboutScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.splashscreen_logo),
+                        painter = painterResource(R.mipmap.ic_launcher),
                         contentDescription = stringResource(R.string.app_name),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit,
@@ -104,7 +111,7 @@ fun AboutScreen(
                     fontWeight = FontWeight.Black,
                 )
                 Text(
-                    text = stringResource(R.string.about_version, APP_VERSION),
+                    text = stringResource(R.string.about_version, appVersion),
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     style = MiuixTheme.textStyles.body2,
                 )
@@ -120,7 +127,7 @@ fun AboutScreen(
         item {
             Section(stringResource(R.string.about_section_info)) {
                 ElevatedPanel(contentPadding = PaddingValues(0.dp)) {
-                    SettingRow(stringResource(R.string.about_version_label), APP_VERSION) {
+                    SettingRow(stringResource(R.string.about_version_label), appVersion) {
                         Text(stringResource(R.string.about_latest), color = MiuixTheme.colorScheme.primary, fontWeight = FontWeight.Bold, style = MiuixTheme.textStyles.footnote1)
                     }
                     DividerLine()
@@ -129,7 +136,7 @@ fun AboutScreen(
                     }
                     DividerLine()
                     SettingRow(stringResource(R.string.about_license), stringResource(R.string.about_open_source)) {
-                        Text("MIT", color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontWeight = FontWeight.Bold, style = MiuixTheme.textStyles.footnote1)
+                        Text("GPLv3", color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontWeight = FontWeight.Bold, style = MiuixTheme.textStyles.footnote1)
                     }
                 }
             }

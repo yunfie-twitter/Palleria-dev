@@ -53,28 +53,44 @@ jobs:
 
       - name: Update F-Droid Repository
         run: |
+          # Fetch existing repository to keep multiple versions
+          # We use a separate directory to avoid conflicts with the current checkout
+          git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git old-repo || mkdir old-repo
+          
           mkdir -p fdroid/repo
+          
+          # Copy old APKs if they exist to maintain multiple versions in the repo
+          if [ -d old-repo/repo ]; then
+            echo "Copying existing APKs from gh-pages..."
+            cp old-repo/repo/*.apk fdroid/repo/ || true
+          fi
+          
+          # Copy new APKs built in this run
           cp app/build/outputs/apk/release/*.apk fdroid/repo/
           
           cd fdroid
-          # 最小限のconfig.ymlを作成
+          # Create config.yml for fdroidserver
           cat <<EOF > config.yml
           repo_url: https://yunfie-twitter.github.io/Illustia-dev/repo
           repo_name: Illustia Dev Repository
           repo_description: Development builds for Illustia
           
-          # インデックスの署名にアプリと同じキーストアを使用
+          # Keep all versions in the main repo instead of moving to archive
+          archive_older: 0
+          
+          # KeyStore configuration for signing the repository index
           keystore: ../release.keystore
-          keystorepass: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-          keypass: ${{ secrets.RELEASE_KEY_PASSWORD }}
-          keyalias: ${{ secrets.RELEASE_KEY_ALIAS }}
-          repo_keyalias: ${{ secrets.RELEASE_KEY_ALIAS }}
-          repo_keystorepass: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-          repo_keypass: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          keystorepass: "${{ secrets.RELEASE_KEYSTORE_PASSWORD }}"
+          keypass: "${{ secrets.RELEASE_KEY_PASSWORD }}"
+          keyalias: "${{ secrets.RELEASE_KEY_ALIAS }}"
+          repo_keyalias: "${{ secrets.RELEASE_KEY_ALIAS }}"
+          repo_keystorepass: "${{ secrets.RELEASE_KEYSTORE_PASSWORD }}"
+          repo_keypass: "${{ secrets.RELEASE_KEY_PASSWORD }}"
           EOF
           chmod 600 config.yml
           
-          # インデックス(index-v1.jar等)を生成
+          # Generate/Update the repository index
+          # This will also extract icons from APKs
           fdroid update --create-metadata
           rm config.yml
 
@@ -84,7 +100,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./fdroid
           publish_branch: gh-pages
-          force_orphan: true
+          # We don't use force_orphan so that we can potentially keep older history, 
+          # but the manual copy above is what actually preserves the APKs.
+          force_orphan: false
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')

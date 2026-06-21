@@ -179,11 +179,18 @@ private fun rememberQuickActions(
 @Composable
 private fun rememberUtilityActions(viewModel: IllustiaViewModel): List<MoreAction> {
     val context = LocalContext.current
-    return remember(viewModel) {
+    val appVersion = remember {
+        runCatching {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.versionName
+        }.getOrNull() ?: "1.0.0"
+    }
+
+    return remember(viewModel, appVersion) {
         listOf(
             MoreAction(
                 title = context.getString(R.string.more_about),
-                summary = "v1.0.2",
+                summary = "v$appVersion",
                 icon = MiuixIcons.More,
                 onClick = viewModel::openAbout,
             ),
