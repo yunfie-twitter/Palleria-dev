@@ -13,8 +13,8 @@ android {
         applicationId "com.yunfie.illustia"
         minSdk 33
         targetSdk 36
-        versionCode 20
-        versionName "1.3.0"
+        versionCode 1
+        versionName "1.0.0"
     }
 
     signingConfigs {

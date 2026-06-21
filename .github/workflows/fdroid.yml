@@ -37,6 +37,29 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Get Version Info
+        id: version
+        run: |
+          VERSION_NAME=$(./gradlew :app:properties -q | grep "^versionName:" | awk '{print $2}')
+          VERSION_CODE=$(./gradlew :app:properties -q | grep "^versionCode:" | awk '{print $2}')
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create and Push Tag
+        if: github.ref == 'refs/heads/main'
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag }}"
+          if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Creating new tag: $TAG_NAME"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG_NAME"
+            git push origin "$TAG_NAME"
+          else
+            echo "Tag $TAG_NAME already exists, skipping."
+          fi
+
       - name: Build APKs
         run: ./gradlew assemble
         env:
