@@ -46,9 +46,10 @@ jobs:
       - name: Install fdroidserver
         run: |
           sudo apt-get update
+          sudo apt-get remove -y fdroidserver || true
           sudo apt-get install -y python3-pip python3-setuptools libjpeg-dev zlib1g-dev
-          pip3 install --user fdroidserver
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          pipx install fdroidserver
+          echo "/home/runner/.local/bin" >> $GITHUB_PATH
 
       - name: Update F-Droid Repository
         run: |

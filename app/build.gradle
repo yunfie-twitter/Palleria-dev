@@ -44,10 +44,6 @@ android {
         compose true
     }
 
-    aaptOptions {
-        additionalParameters "--no-sparse-resource-offsets"
-    }
-
     packaging {
         jniLibs {
             keepDebugSymbols += ["**/libandroidx.graphics.path.so"]
