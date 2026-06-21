@@ -53,29 +53,35 @@ jobs:
 
       - name: Update F-Droid Repository
         run: |
-          # Create fdroid directory structure
-          mkdir -p fdroid/repo
+          # Create a clean directory for the repository
+          mkdir -p public/repo
+          mkdir -p public/metadata
           
-          # Copy metadata from source
-          cp -r fdroid/metadata fdroid/ 2>/dev/null || mkdir -p fdroid/metadata
-          
-          # Fetch existing repository to keep multiple versions
-          # We use a separate directory to avoid conflicts with the current checkout
-          git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git old-repo || mkdir old-repo
-          
-          # Copy EVERYTHING from old repo first (including icons and old APKs)
+          # 1. Fetch existing repository from gh-pages to keep multiple versions
+          git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git old-repo || true
           if [ -d old-repo/repo ]; then
-            echo "Copying existing repository files from gh-pages..."
-            cp -r old-repo/repo fdroid/
+            echo "Copying existing APKs and icons..."
+            cp -r old-repo/repo/. public/repo/
           fi
-
-          # Copy new APKs built in this run (this will overwrite if the filename is identical)
-          cp app/build/outputs/apk/release/*.apk fdroid/repo/
+          if [ -d old-repo/metadata ]; then
+            echo "Copying existing metadata from gh-pages..."
+            cp -r old-repo/metadata/. public/metadata/
+          fi
           
-          cd fdroid
+          # 2. Copy current metadata from source (may overwrite old ones)
+          if [ -d fdroid/metadata ]; then
+            echo "Merging metadata from source..."
+            cp -r fdroid/metadata/. public/metadata/
+          fi
+          
+          # 3. Copy new APKs built in this run
+          # They have unique names (Illustia-version-code.apk) so they won't overwrite
+          cp app/build/outputs/apk/release/*.apk public/repo/
+          
+          cd public
           # Create config.yml for fdroidserver
           cat <<EOF > config.yml
-          repo_url: https://yunfie-twitter.github.io/Illustia-dev/repo
+          repo_url: https://yunfie-twitter.github.io/${{ github.event.repository.name }}/repo
           repo_name: Illustia Dev Repository
           repo_description: Development builds for Illustia
           
@@ -94,18 +100,16 @@ jobs:
           chmod 600 config.yml
           
           # Generate/Update the repository index
-          # This will also extract icons from APKs
           fdroid update --create-metadata
           rm config.yml
+          cd ..
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./fdroid
+          publish_dir: ./public
           publish_branch: gh-pages
-          # We don't use force_orphan so that we can potentially keep older history, 
-          # but the manual copy above is what actually preserves the APKs.
           force_orphan: false
 
       - name: Create GitHub Release
