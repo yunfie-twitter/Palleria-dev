@@ -15,3 +15,8 @@ local.properties
 # Bundle artifacts
 *.jsbundle
 pixez/
+# Android signing keys
+*.keystore
+*.jks
+debug.keystore
+release.keystore
