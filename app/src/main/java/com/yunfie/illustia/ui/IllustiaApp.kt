@@ -163,7 +163,11 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
         when (val route = backStack.removeAt(backStack.lastIndex)) {
             AppRoute.Detail -> viewModel.closeIllust()
             AppRoute.ImageViewer -> viewModel.closeImageViewer()
-            AppRoute.UserProfile -> viewModel.closeUserPage()
+            AppRoute.UserProfile -> {
+                // ここでは単に非表示フラグを立てるだけにし、
+                // 実際のデータクリアはバックスタックの監視(LaunchedEffect)で行われるようにする
+                viewModel.hideUserPage()
+            }
             else -> Unit
         }
     }
@@ -260,7 +264,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                 if (!hasUserProfile) {
                     delay(350)
                     if (AppRoute.UserProfile !in backStack) {
-                        viewModel.closeUser()
+                        viewModel.closeUserPage()
                     }
                 }
             }

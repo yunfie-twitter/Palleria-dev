@@ -7,6 +7,9 @@ WebSite: https://github.com/yunfie-twitter/Illustia-dev
 SourceCode: https://github.com/yunfie-twitter/Illustia-dev
 IssueTracker: https://github.com/yunfie-twitter/Illustia-dev/issues
 
+AntiFeatures:
+  - NonFreeNet
+
 Summary: Pixivのイラスト・漫画・作品を快適に閲覧できる、シンプルで使いやすい非公式クライアントです。
 Description: |-
   Pixivのイラスト・漫画・作品を快適に閲覧できる、シンプルで使いやすい非公式クライアントです。
@@ -17,3 +20,5 @@ Description: |-
   - 強力な検索機能（タグ・ユーザー）
   - ブックマーク管理
   - 画像保存機能
+
+  Pixiv Anti-Feature: Non-Free Network Services

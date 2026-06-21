@@ -1,5 +1,6 @@
 package com.yunfie.illustia.ui.screens
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +52,7 @@ import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
@@ -79,7 +82,7 @@ fun UserProfileScreen(
     onUnmuteUser: () -> Unit,
     showHeaderControls: Boolean = true,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = MiuixTheme.colorScheme.background,
+    backgroundColor: Color = if (isSystemInDarkTheme()) Color.Black else MiuixTheme.colorScheme.background,
     contentHeight: Dp? = null,
 ) {
     PredictiveBackGestureHandler(onBack = onBack)
@@ -171,14 +174,24 @@ private fun UserProfileHeader(
     onBack: () -> Unit,
     onMuteUser: () -> Unit
 ) {
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     Box(
         modifier = Modifier
+            .layout { measurable, constraints ->
+                val padding = 14.dp.roundToPx()
+                val expandedWidth = constraints.maxWidth + padding * 2
+                val placeable = measurable.measure(
+                    constraints.copy(
+                        maxWidth = expandedWidth,
+                        minWidth = expandedWidth
+                    )
+                )
+                layout(constraints.maxWidth, placeable.height) {
+                    placeable.placeRelative(-padding, 0)
+                }
+            }
             .fillMaxWidth()
-            .requiredWidth(screenWidth + 28.dp)
-            .offset(x = (-14).dp)
             .height(180.dp)
-            .background(MiuixTheme.colorScheme.surfaceContainerHigh),
+            .background(if (isSystemInDarkTheme()) Color.Black else MiuixTheme.colorScheme.surfaceContainerHigh),
     ) {
         if (user.backgroundImageUrl != null) {
             PixivImage(
@@ -194,7 +207,7 @@ private fun UserProfileHeader(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                    .padding(horizontal = 24.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -277,13 +290,13 @@ private fun UserProfileInfo(
                 )
             }
         }
-        TabRowWithContour(
+        TabRow(
             tabs = listOf(stringResource(R.string.user_tab_works), stringResource(R.string.user_tab_bookmarks), stringResource(R.string.user_tab_info)),
             selectedTabIndex = selectedTab,
             onTabSelected = onTabSelected,
             colors = TabRowDefaults.tabRowColors(
                 backgroundColor = Color.Transparent,
-                selectedBackgroundColor = MiuixTheme.colorScheme.surfaceContainerHigh,
+                selectedBackgroundColor = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.15f) else MiuixTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 selectedContentColor = MiuixTheme.colorScheme.onBackground,
             ),

@@ -53,19 +53,23 @@ jobs:
 
       - name: Update F-Droid Repository
         run: |
+          # Create fdroid directory structure
+          mkdir -p fdroid/repo
+          
+          # Copy metadata from source
+          cp -r fdroid/metadata fdroid/ 2>/dev/null || mkdir -p fdroid/metadata
+          
           # Fetch existing repository to keep multiple versions
           # We use a separate directory to avoid conflicts with the current checkout
           git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git old-repo || mkdir old-repo
           
-          mkdir -p fdroid/repo
-          
-          # Copy old APKs if they exist to maintain multiple versions in the repo
+          # Copy EVERYTHING from old repo first (including icons and old APKs)
           if [ -d old-repo/repo ]; then
-            echo "Copying existing APKs from gh-pages..."
-            cp old-repo/repo/*.apk fdroid/repo/ || true
+            echo "Copying existing repository files from gh-pages..."
+            cp -r old-repo/repo fdroid/
           fi
-          
-          # Copy new APKs built in this run
+
+          # Copy new APKs built in this run (this will overwrite if the filename is identical)
           cp app/build/outputs/apk/release/*.apk fdroid/repo/
           
           cd fdroid

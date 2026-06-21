@@ -874,6 +874,19 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             _uiState.update { it.copy(message = str(R.string.error_load_artist_failed)) }
             return
         }
+        if (_uiState.value.selectedUser?.id != userId) {
+            _uiState.update {
+                it.copy(
+                    selectedUser = null,
+                    selectedUserIllusts = emptyList(),
+                    selectedUserNextUrl = null,
+                    selectedUserBookmarks = emptyList(),
+                    selectedUserBookmarksNextUrl = null,
+                    userPageDismissed = false,
+                    userPageFromSheet = false,
+                )
+            }
+        }
         runLoading {
             val profile = repository.userDetail(userId)
             val page = repository.userIllusts(userId)
@@ -897,11 +910,6 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         closeUserPageJob = null
         _uiState.update {
             it.copy(
-                selectedUser = null,
-                selectedUserIllusts = emptyList(),
-                selectedUserNextUrl = null,
-                selectedUserBookmarks = emptyList(),
-                selectedUserBookmarksNextUrl = null,
                 showUserPage = false,
                 userPageFromSheet = false,
                 userPageDismissed = true,
@@ -979,6 +987,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     selectedUserBookmarks = emptyList(),
                     selectedUserBookmarksNextUrl = null,
                     userPageDismissed = false,
+                    userPageFromSheet = false,
                 )
             }
             closeUserPageJob = null

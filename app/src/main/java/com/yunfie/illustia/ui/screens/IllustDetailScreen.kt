@@ -82,6 +82,7 @@ fun IllustDetailScreen(
     confirmOnLongPressSave: Boolean,
     skipConfirmOnDetailSave: Boolean,
 ) {
+    val haptic = LocalHapticFeedback.current
     PredictiveBackGestureHandler(onBack = onBack)
     var pendingSave by remember { mutableStateOf<Pair<String, String>?>(null) }
     var showUnfollowConfirm by remember { mutableStateOf(false) }
@@ -136,7 +137,10 @@ fun IllustDetailScreen(
         containerColor = MiuixTheme.colorScheme.surface,
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onBookmark,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onBookmark()
+                },
                 shape = RoundedCornerShape(18.dp),
                 containerColor = MiuixTheme.colorScheme.surfaceContainerHigh,
             ) {
@@ -151,7 +155,7 @@ fun IllustDetailScreen(
         },
     ) { scaffoldPadding ->
         Surface(
-            modifier = Modifier.fillMaxSize().padding(bottom = scaffoldPadding.calculateBottomPadding()),
+            modifier = Modifier.fillMaxSize().padding(bottom = scaffoldPadding.calculateBottomPadding().coerceAtLeast(0.dp)),
             color = MiuixTheme.colorScheme.surface,
         ) {
         LazyColumn(
