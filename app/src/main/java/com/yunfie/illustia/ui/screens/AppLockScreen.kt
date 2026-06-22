@@ -1,0 +1,418 @@
+package com.yunfie.illustia.ui.screens
+
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import com.yunfie.illustia.IllustiaViewModel
+import com.yunfie.illustia.R
+import kotlinx.coroutines.delay
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.icon.extended.Remove
+import top.yukonga.miuix.kmp.icon.extended.Unlock
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+@Composable
+fun AppLockScreen(
+    biometricEnabled: Boolean,
+    failCount: Int,
+    cooldownUntil: Long,
+    viewModel: IllustiaViewModel,
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    var pin by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+    var shake by remember { mutableStateOf(false) }
+    var unlocking by remember { mutableStateOf(false) }
+    var cooldownRemaining by remember { mutableStateOf(0L) }
+    var errorFlash by remember { mutableFloatStateOf(0f) }
+
+    // Block all back navigation while locked.
+    BackHandler(enabled = true) {}
+    PredictiveBackHandler(enabled = true) {}
+
+    val biometricAvailable = remember {
+        val manager = BiometricManager.from(context)
+        manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS
+    }
+    val showBiometric = biometricEnabled && biometricAvailable
+    val isCooldownActive = cooldownRemaining > 0L
+
+    // Cooldown countdown timer
+    LaunchedEffect(cooldownUntil) {
+        while (true) {
+            val remaining = ((cooldownUntil - System.currentTimeMillis()) / 1000L).coerceAtLeast(0L)
+            cooldownRemaining = remaining
+            if (remaining <= 0L) break
+            delay(250)
+        }
+    }
+
+    fun vibrateUnlock() {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(VibratorManager::class.java)
+            val vibrator = vibratorManager?.defaultVibrator
+            vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? Vibrator
+            vibrator?.vibrate(longArrayOf(0, 30, 60, 30), -1)
+        }
+    }
+
+    fun vibrateError() {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(VibratorManager::class.java)
+            val vibrator = vibratorManager?.defaultVibrator
+            vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? Vibrator
+            vibrator?.vibrate(longArrayOf(0, 40, 60, 40), -1)
+        }
+    }
+
+    fun triggerUnlockAnimation() {
+        unlocking = true
+        vibrateUnlock()
+    }
+
+    fun triggerBiometric() {
+        val activity = context as? FragmentActivity ?: return
+        val executor = ContextCompat.getMainExecutor(context)
+        val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                viewModel.resetLockFailCount()
+                triggerUnlockAnimation()
+            }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {}
+        })
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(context.getString(R.string.app_lock_biometric_title))
+            .setSubtitle(context.getString(R.string.app_lock_biometric_subtitle))
+            .setNegativeButtonText(context.getString(R.string.action_cancel))
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK)
+            .build()
+        prompt.authenticate(promptInfo)
+    }
+
+    LaunchedEffect(showBiometric) {
+        if (showBiometric) {
+            delay(300)
+            triggerBiometric()
+        }
+    }
+
+    LaunchedEffect(shake) {
+        if (shake) {
+            delay(500)
+            shake = false
+            error = false
+        }
+    }
+
+    LaunchedEffect(errorFlash) {
+        if (errorFlash > 0f) {
+            delay(600)
+            errorFlash = 0f
+        }
+    }
+
+    LaunchedEffect(unlocking) {
+        if (unlocking) {
+            delay(500)
+            viewModel.confirmUnlock()
+        }
+    }
+
+    fun onDigitPressed(digit: Char) {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (unlocking || isCooldownActive) return
+        if (error) {
+            pin = digit.toString()
+            error = false
+            return
+        }
+        if (pin.length >= 6) return
+        val newPin = pin + digit
+        pin = newPin
+        if (newPin.length == 6) {
+            if (viewModel.verifyPin(newPin)) {
+                viewModel.resetLockFailCount()
+                triggerUnlockAnimation()
+            } else {
+                error = true
+                shake = true
+                errorFlash = 1f
+                vibrateError()
+                viewModel.recordLockFailure()
+                pin = ""
+            }
+        }
+    }
+
+    fun onDeletePressed() {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (unlocking || isCooldownActive) return
+        if (error) {
+            error = false
+            pin = ""
+            return
+        }
+        if (pin.isNotEmpty()) {
+            pin = pin.dropLast(1)
+        }
+    }
+
+    val unlockAlpha by animateFloatAsState(
+        targetValue = if (unlocking) 0f else 1f,
+        animationSpec = tween(durationMillis = 400),
+    )
+    val unlockScale by animateFloatAsState(
+        targetValue = if (unlocking) 1.1f else 1f,
+        animationSpec = tween(durationMillis = 400),
+    )
+    val flashAlpha by animateFloatAsState(
+        targetValue = errorFlash,
+        animationSpec = tween(durationMillis = 600),
+    )
+
+    val shakeTranslateX = if (shake) 16.dp else 0.dp
+    val attemptsRemaining = (12 - failCount).coerceAtLeast(0)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MiuixTheme.colorScheme.surface)
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center,
+    ) {
+        // Red flash overlay on error
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MiuixTheme.colorScheme.error.copy(alpha = flashAlpha * 0.15f))
+                .clickable(enabled = false) {},
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
+                .alpha(unlockAlpha)
+                .scale(unlockScale),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
+
+            Icon(
+                imageVector = if (unlocking) MiuixIcons.Unlock else MiuixIcons.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = if (error) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.primary,
+            )
+
+            Text(
+                text = stringResource(R.string.app_lock_title),
+                color = MiuixTheme.colorScheme.onSurface,
+                style = MiuixTheme.textStyles.title2,
+                fontWeight = FontWeight.Bold,
+            )
+
+            // PIN dots with shake
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(horizontal = if (shake) shakeTranslateX else 0.dp),
+            ) {
+                repeat(6) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(
+                                when {
+                                    unlocking -> MiuixTheme.colorScheme.primary
+                                    error -> MiuixTheme.colorScheme.error
+                                    index < pin.length -> MiuixTheme.colorScheme.primary
+                                    else -> MiuixTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                }
+                            ),
+                    )
+                }
+            }
+
+            // Status messages
+            when {
+                isCooldownActive -> {
+                    Text(
+                        text = stringResource(R.string.app_lock_cooldown, cooldownRemaining.toFloat()),
+                        color = MiuixTheme.colorScheme.error,
+                        style = MiuixTheme.textStyles.footnote1,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                error -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.app_lock_incorrect),
+                            color = MiuixTheme.colorScheme.error,
+                            style = MiuixTheme.textStyles.footnote1,
+                        )
+                        if (failCount in 3..11) {
+                            Text(
+                                text = stringResource(R.string.app_lock_attempts_remaining, attemptsRemaining),
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                style = MiuixTheme.textStyles.footnote1,
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            NumberPad(
+                onDigit = ::onDigitPressed,
+                onDelete = ::onDeletePressed,
+                onBiometric = if (showBiometric && !unlocking && !isCooldownActive) ::triggerBiometric else null,
+                enabled = !isCooldownActive && !unlocking,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NumberPad(
+    onDigit: (Char) -> Unit,
+    onDelete: () -> Unit,
+    onBiometric: (() -> Unit)?,
+    enabled: Boolean,
+) {
+    val rows = listOf(
+        listOf('1', '2', '3'),
+        listOf('4', '5', '6'),
+        listOf('7', '8', '9'),
+    )
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        rows.forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                row.forEach { digit ->
+                    PadButton(
+                        label = digit.toString(),
+                        onClick = { onDigit(digit) },
+                        enabled = enabled,
+                    )
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            Box(
+                modifier = Modifier.size(72.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (onBiometric != null) {
+                    Icon(
+                        imageVector = MiuixIcons.Unlock,
+                        contentDescription = stringResource(R.string.app_lock_biometric_title),
+                        modifier = Modifier
+                            .size(40.dp)
+                            .alpha(if (enabled) 1f else 0.4f)
+                            .clickable(enabled = enabled) { onBiometric() },
+                        tint = MiuixTheme.colorScheme.primary,
+                    )
+                }
+            }
+            PadButton(label = "0", onClick = { onDigit('0') }, enabled = enabled)
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .alpha(if (enabled) 1f else 0.4f)
+                    .clickable(enabled = enabled) { onDelete() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Remove,
+                    contentDescription = stringResource(R.string.action_delete),
+                    modifier = Modifier.size(28.dp),
+                    tint = MiuixTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PadButton(label: String, onClick: () -> Unit, enabled: Boolean) {
+    Box(
+        modifier = Modifier
+            .size(72.dp)
+            .clip(CircleShape)
+            .background(
+                if (enabled) MiuixTheme.colorScheme.surfaceContainer
+                else MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+            )
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = if (enabled) MiuixTheme.colorScheme.onSurface
+                    else MiuixTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+            style = MiuixTheme.textStyles.title1,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}

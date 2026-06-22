@@ -172,6 +172,43 @@
     <string name="general_startup_screen">Startup Screen</string>
     <string name="general_startup_screen_desc">Choose the tab to open on app launch</string>
 
+    <!-- App lock -->
+    <string name="app_lock_section_title">App Lock</string>
+    <string name="app_lock_enable">App Lock</string>
+    <string name="app_lock_enable_desc">Lock the app with a PIN code on launch</string>
+    <string name="app_lock_enabled">Enabled</string>
+    <string name="app_lock_disabled">Disabled</string>
+    <string name="app_lock_settings_title">App Lock Settings</string>
+    <string name="app_lock_title">Enter PIN</string>
+    <string name="app_lock_incorrect">Incorrect PIN</string>
+    <string name="app_lock_biometric">Biometric Unlock</string>
+    <string name="app_lock_biometric_desc">Use fingerprint or face recognition to unlock</string>
+    <string name="app_lock_biometric_title">Biometric Unlock</string>
+    <string name="app_lock_biometric_subtitle">Authenticate to unlock</string>
+    <string name="app_lock_timing_return">Lock on Return from Background</string>
+    <string name="app_lock_timing_return_desc">Require PIN when returning to the app from other apps</string>
+    <string name="app_lock_section_pin">PIN Code</string>
+    <string name="app_lock_section_options">Options</string>
+    <string name="app_lock_set_pin">Set PIN</string>
+    <string name="app_lock_change_pin">Change PIN</string>
+    <string name="app_lock_disable">Disable App Lock</string>
+    <string name="app_lock_disable_title">Disable App Lock</string>
+    <string name="app_lock_disable_confirm">This will remove your PIN and biometric settings.</string>
+    <string name="app_lock_enter_current">Enter Current PIN</string>
+    <string name="app_lock_enter_new">Enter New PIN (4–6 digits)</string>
+    <string name="app_lock_confirm_new">Confirm New PIN</string>
+    <string name="app_lock_mismatch">PINs do not match</string>
+    <string name="app_lock_verify_disable">Enter PIN to disable app lock</string>
+    <string name="app_lock_verify_change_timing">Enter PIN to change lock timing</string>
+    <string name="app_lock_biometric_verify_title">Verify Biometric</string>
+    <string name="app_lock_biometric_verify_subtitle">Authenticate to enable biometric unlock</string>
+    <string name="app_lock_attempts_remaining">%d attempts remaining</string>
+    <string name="app_lock_cooldown">Try again in %.0f seconds</string>
+    <string name="app_lock_recovery_title">Choose Recovery Method</string>
+    <string name="app_lock_recovery_summary">You have failed to enter the PIN 12 times. Verify your identity or reset the app.</string>
+    <string name="app_lock_recovery_verify">Verify with Pixiv account</string>
+    <string name="app_lock_recovery_reset">Reset app data</string>
+
     <!-- Image settings screen -->
     <string name="image_settings_title">Image Settings</string>
     <string name="image_section_storage">Storage</string>
@@ -230,6 +267,11 @@
     <!-- Data settings screen -->
     <string name="data_settings_title">Data Management</string>
     <string name="data_section_overview">Overview</string>
+    <string name="data_section_history">History Saving</string>
+    <string name="data_save_view_history">Save View History</string>
+    <string name="data_save_view_history_desc">Turn off to stop recording viewed works</string>
+    <string name="data_save_search_history">Save Search History</string>
+    <string name="data_save_search_history_desc">Turn off to stop recording search queries</string>
     <string name="data_section_transfer">Backup &amp; Restore</string>
     <string name="data_export">Export Data</string>
     <string name="data_import">Import Data</string>

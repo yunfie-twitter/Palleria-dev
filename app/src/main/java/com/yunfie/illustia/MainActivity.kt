@@ -9,7 +9,7 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,6 +19,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yunfie.illustia.nativebridge.NativeIntentRouter
@@ -29,7 +31,7 @@ import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val viewModel by viewModels<IllustiaViewModel> {
         androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(application)
     }
@@ -47,6 +49,17 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         applyAppLanguage(SettingsStore.readStoredAppLanguage(applicationContext))
+
+        // Observe app lifecycle for lock-on-return
+        val lifecycleObserver = object : DefaultLifecycleObserver {
+            override fun onStop(owner: LifecycleOwner) {
+                if (viewModel.shouldLockOnReturn()) {
+                    viewModel.lockApp()
+                }
+            }
+        }
+        androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
+
         setContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val controller = remember {
@@ -57,6 +70,16 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(state.settings.secureWindow) {
                 applySecureWindow(state.settings.secureWindow)
+            }
+
+            // Force FLAG_SECURE while locked so the app is obscured in recents
+            // and screenshots are blocked, regardless of secureWindow setting.
+            LaunchedEffect(state.appLocked, state.settings.secureWindow) {
+                if (state.appLocked && state.settings.appLockEnabled) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    applySecureWindow(state.settings.secureWindow)
+                }
             }
 
             LaunchedEffect(state.settings.appLanguage) {

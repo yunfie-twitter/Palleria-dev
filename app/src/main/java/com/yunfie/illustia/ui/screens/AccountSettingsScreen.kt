@@ -93,9 +93,9 @@ fun AccountSettingsScreen(
                         )
                     }
                     DividerLine()
-                    SettingLinkRow(stringResource(R.string.account_switch_add), viewModel::openAccountLoginMethod)
+                    SettingLinkRow(stringResource(R.string.account_switch_add)) { viewModel.openAccountLoginMethod() }
                     DividerLine()
-                    SettingLinkRow(stringResource(R.string.account_logout), { showLogoutConfirm = true })
+                    SettingLinkRow(stringResource(R.string.account_logout)) { showLogoutConfirm = true }
                 }
             }}
         }

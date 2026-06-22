@@ -58,6 +58,11 @@ data class AppSettings(
     val searchUsersEnabled: Boolean = true,
     val searchHistory: List<String> = emptyList(),
     val favoriteTags: List<String> = emptyList(),
+    val saveViewHistory: Boolean = true,
+    val saveSearchHistory: Boolean = true,
+    val appLockEnabled: Boolean = false,
+    val appLockTiming: String = "launch",
+    val biometricEnabled: Boolean = false,
     val viewHistory: List<Illust> = emptyList(),
     val smoothTransitions: Boolean = true,
     val prefetchImages: Boolean = false,
@@ -151,6 +156,30 @@ class SettingsStore(context: Context) {
         }
     }
 
+    fun savePinHash(pin: String) {
+        val hash = pin.sha256()
+        sensitivePreferences.edit().putString(KEY_PIN_HASH, hash).apply()
+    }
+
+    fun verifyPin(pin: String): Boolean {
+        val stored = sensitivePreferences.getString(KEY_PIN_HASH, null) ?: return false
+        return pin.sha256() == stored
+    }
+
+    fun hasPinSet(): Boolean {
+        return sensitivePreferences.getString(KEY_PIN_HASH, null) != null
+    }
+
+    fun clearPinHash() {
+        sensitivePreferences.edit().remove(KEY_PIN_HASH).apply()
+    }
+
+    private fun String.sha256(): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(this.toByteArray(Charsets.UTF_8))
+        return hashBytes.joinToString("") { "%02x".format(it) }
+    }
+
     private fun readFromDataStore(preferences: Preferences, roomData: RoomSettingsData): AppSettings {
         val tokenByUserId = decodeAccountTokens(sensitivePreferences.getString(KEY_ACCOUNT_TOKENS, "").orEmpty())
         val fallbackAccounts = decodeAccounts(sensitivePreferences.getString(KEY_ACCOUNTS, "").orEmpty())
@@ -189,6 +218,11 @@ class SettingsStore(context: Context) {
             favoriteTags = roomData.favoriteTags.map { it.tag }.ifEmpty {
                 decodeStringList(preferences[FAVORITE_TAGS_JSON])
             },
+            saveViewHistory = preferences[SAVE_VIEW_HISTORY] ?: true,
+            saveSearchHistory = preferences[SAVE_SEARCH_HISTORY] ?: true,
+            appLockEnabled = preferences[APP_LOCK_ENABLED] ?: false,
+            appLockTiming = preferences[APP_LOCK_TIMING] ?: "launch",
+            biometricEnabled = preferences[BIOMETRIC_ENABLED] ?: false,
             viewHistory = roomData.viewHistory.map(::illustFromEntity).ifEmpty {
                 decodeHistoryIllusts(preferences[VIEW_HISTORY_JSON])
             }.take(MAX_VIEW_HISTORY),
@@ -238,6 +272,11 @@ class SettingsStore(context: Context) {
         preferences[SEARCH_DURATION] = settings.searchDuration.name
         preferences[SEARCH_BOOKMARK_FILTER] = settings.searchBookmarkFilter.name
         preferences[SEARCH_USERS_ENABLED] = settings.searchUsersEnabled
+        preferences[SAVE_VIEW_HISTORY] = settings.saveViewHistory
+        preferences[SAVE_SEARCH_HISTORY] = settings.saveSearchHistory
+        preferences[APP_LOCK_ENABLED] = settings.appLockEnabled
+        preferences[APP_LOCK_TIMING] = settings.appLockTiming
+        preferences[BIOMETRIC_ENABLED] = settings.biometricEnabled
         preferences.remove(SEARCH_HISTORY_JSON)
         preferences.remove(FAVORITE_TAGS_JSON)
         preferences.remove(VIEW_HISTORY_JSON)
@@ -394,6 +433,11 @@ class SettingsStore(context: Context) {
             searchUsersEnabled = preferences.getBoolean(KEY_SEARCH_USERS_ENABLED, true),
             searchHistory = decodeLegacyStringList(preferences.getString(KEY_SEARCH_HISTORY, "")).take(MAX_SEARCH_HISTORY),
             favoriteTags = decodeLegacyStringList(preferences.getString(KEY_FAVORITE_TAGS, "")),
+            saveViewHistory = preferences.getBoolean("saveViewHistory", true),
+            saveSearchHistory = preferences.getBoolean("saveSearchHistory", true),
+            appLockEnabled = preferences.getBoolean("appLockEnabled", false),
+            appLockTiming = preferences.getString("appLockTiming", "launch") ?: "launch",
+            biometricEnabled = preferences.getBoolean("biometricEnabled", false),
             viewHistory = decodeHistoryIllusts(preferences.getString(KEY_VIEW_HISTORY, "")).take(MAX_VIEW_HISTORY),
             smoothTransitions = preferences.getBoolean(KEY_SMOOTH_TRANSITIONS, true),
             prefetchImages = preferences.getBoolean(KEY_PREFETCH_IMAGES, false),
@@ -637,6 +681,7 @@ class SettingsStore(context: Context) {
         private const val KEY_ACCOUNTS = "accounts"
         private const val KEY_ACCOUNT_TOKENS = "accountTokens"
         private const val KEY_ACTIVE_ACCOUNT_INDEX = "activeAccountIndex"
+        private const val KEY_PIN_HASH = "pinHash"
         private const val KEY_BOOKMARK_USER_ID = "bookmarkUserId"
         private const val KEY_ALLOW_R18 = "allowR18"
         private const val KEY_HIGH_QUALITY = "highQualityImages"
@@ -675,6 +720,11 @@ class SettingsStore(context: Context) {
         private val SEARCH_HISTORY_JSON = stringPreferencesKey(KEY_SEARCH_HISTORY)
         private val FAVORITE_TAGS_JSON = stringPreferencesKey(KEY_FAVORITE_TAGS)
         private val VIEW_HISTORY_JSON = stringPreferencesKey(KEY_VIEW_HISTORY)
+        private val SAVE_VIEW_HISTORY = booleanPreferencesKey("saveViewHistory")
+        private val SAVE_SEARCH_HISTORY = booleanPreferencesKey("saveSearchHistory")
+        private val APP_LOCK_ENABLED = booleanPreferencesKey("appLockEnabled")
+        private val APP_LOCK_TIMING = stringPreferencesKey("appLockTiming")
+        private val BIOMETRIC_ENABLED = booleanPreferencesKey("biometricEnabled")
         private val SMOOTH_TRANSITIONS = booleanPreferencesKey(KEY_SMOOTH_TRANSITIONS)
         private val PREFETCH_IMAGES = booleanPreferencesKey(KEY_PREFETCH_IMAGES)
         private val NOTCH_OPTIMIZATION = booleanPreferencesKey("notchOptimization")

@@ -16,6 +16,7 @@ import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.R
 import com.yunfie.illustia.ui.components.StateBanner
 import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -62,7 +63,11 @@ fun OnboardingScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 StateBanner(state.loadState)
-                Button(onClick = viewModel::openWebLogin, modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = viewModel::openWebLogin,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColorsPrimary(),
+                ) {
                     Text(stringResource(R.string.login_web_button))
                 }
                 Button(onClick = onRefreshTokenLogin, modifier = Modifier.fillMaxWidth()) {

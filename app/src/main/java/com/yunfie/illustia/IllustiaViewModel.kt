@@ -64,6 +64,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
     private val imageStore by lazy { NativeImageStore(getApplication<Application>().applicationContext) }
+    private val settingsStore by lazy { SettingsStore(getApplication<Application>().applicationContext) }
     private val downloadMutex = Mutex()
     private var searchJob: Job? = null
     private var detailExtrasJob: Job? = null
@@ -153,8 +154,9 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val settings = repository.readSettings()
-            _uiState.update { it.withSettings(settings).copy(settingsLoaded = true) }
-            if (settings.refreshToken.isNotBlank()) {
+            val shouldLock = settings.appLockEnabled && settingsStore.hasPinSet()
+            _uiState.update { it.withSettings(settings).copy(settingsLoaded = true, appLocked = shouldLock) }
+            if (settings.refreshToken.isNotBlank() && !shouldLock) {
                 refreshCurrentAccountProfile(settings)
                 if (settings.startupScreen == "home") {
                     refreshHome()
@@ -237,6 +239,152 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateShowAiBadge(value: Boolean) {
         updateSettings { it.copy(showAiBadge = value) }
+    }
+
+    fun updateSaveViewHistory(value: Boolean) {
+        updateSettings { it.copy(saveViewHistory = value) }
+    }
+
+    fun updateSaveSearchHistory(value: Boolean) {
+        updateSettings { it.copy(saveSearchHistory = value) }
+    }
+
+    fun unlockApp(pin: String): Boolean {
+        return if (settingsStore.verifyPin(pin)) {
+            _uiState.update { it.copy(appLocked = false) }
+            viewModelScope.launch(Dispatchers.IO) {
+                val settings = _uiState.value.settings
+                if (settings.refreshToken.isNotBlank() && _uiState.value.homeItems.isEmpty()) {
+                    refreshCurrentAccountProfile(settings)
+                    if (settings.startupScreen == "home") {
+                        refreshHome()
+                    }
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    fun verifyPin(pin: String): Boolean {
+        return settingsStore.verifyPin(pin)
+    }
+
+    fun confirmUnlock() {
+        _uiState.update { it.copy(appLocked = false) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val settings = _uiState.value.settings
+            if (settings.refreshToken.isNotBlank() && _uiState.value.homeItems.isEmpty()) {
+                refreshCurrentAccountProfile(settings)
+                if (settings.startupScreen == "home") {
+                    refreshHome()
+                }
+            }
+        }
+    }
+
+    fun unlockWithBiometric() {
+        _uiState.update { it.copy(appLocked = false) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val settings = _uiState.value.settings
+            if (settings.refreshToken.isNotBlank() && _uiState.value.homeItems.isEmpty()) {
+                refreshCurrentAccountProfile(settings)
+                if (settings.startupScreen == "home") {
+                    refreshHome()
+                }
+            }
+        }
+    }
+
+    fun lockApp() {
+        val settings = _uiState.value.settings
+        if (settings.appLockEnabled && settingsStore.hasPinSet()) {
+            _uiState.update { it.copy(appLocked = true) }
+        }
+    }
+
+    fun shouldLockOnReturn(): Boolean {
+        val settings = _uiState.value.settings
+        return settings.appLockEnabled && settings.appLockTiming == "return" && settingsStore.hasPinSet()
+    }
+
+    fun setupPin(pin: String) {
+        settingsStore.savePinHash(pin)
+        updateSettings { it.copy(appLockEnabled = true) }
+    }
+
+    fun changePin(newPin: String) {
+        settingsStore.savePinHash(newPin)
+    }
+
+    fun disableAppLock() {
+        settingsStore.clearPinHash()
+        updateSettings { it.copy(appLockEnabled = false, biometricEnabled = false) }
+    }
+
+    fun updateBiometricEnabled(value: Boolean) {
+        updateSettings { it.copy(biometricEnabled = value) }
+    }
+
+    fun updateAppLockTiming(value: String) {
+        updateSettings { it.copy(appLockTiming = value) }
+    }
+
+    // ── Lock failure tracking & progressive lockout ──────────────────────────
+    // Cooldown durations (seconds) keyed by fail-count thresholds.
+    private val cooldownTable = listOf(
+        9 to 5 * 60L,   // 5 min
+        6 to 2 * 60L,   // 2 min
+        3 to 30L,        // 30 sec
+    )
+
+    fun recordLockFailure() {
+        val count = _uiState.value.appLockFailCount + 1
+        val cooldownSec = cooldownTable.firstOrNull { count >= it.first }?.second ?: 0L
+        val cooldownUntil = if (cooldownSec > 0L) {
+            System.currentTimeMillis() + cooldownSec * 1000L
+        } else {
+            0L
+        }
+        _uiState.update {
+            it.copy(
+                appLockFailCount = count,
+                appLockCooldownUntil = cooldownUntil,
+                showLockRecoveryDialog = count >= 12,
+            )
+        }
+    }
+
+    fun resetLockFailCount() {
+        _uiState.update {
+            it.copy(appLockFailCount = 0, appLockCooldownUntil = 0L)
+        }
+    }
+
+    fun dismissLockRecovery() {
+        _uiState.update { it.copy(showLockRecoveryDialog = false) }
+    }
+
+    fun openRecoveryWebLogin() {
+        _uiState.update {
+            it.copy(
+                showLockRecoveryDialog = false,
+                webLoginRequest = createPixivWebLoginRequest(),
+            )
+        }
+    }
+
+    fun resetAppLockData() {
+        settingsStore.clearPinHash()
+        updateSettings { it.copy(appLockEnabled = false, biometricEnabled = false) }
+        resetLockFailCount()
+    }
+
+    fun cooldownRemainingSeconds(): Long {
+        val until = _uiState.value.appLockCooldownUntil
+        if (until == 0L) return 0L
+        return ((until - System.currentTimeMillis()) / 1000L).coerceAtLeast(0L)
     }
 
     fun updateFollowOnLike(value: Boolean) {
@@ -381,10 +529,15 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun completeWebLogin(code: String) {
         val request = _uiState.value.webLoginRequest ?: return
+        val wasRecovery = _uiState.value.appLocked && _uiState.value.appLockFailCount >= 12
         runLoading {
             val session = repository.loginWithAuthorizationCode(code, request.codeVerifier)
             applyLoggedInSession(session.accessToken.isNotBlank(), str(R.string.msg_web_login_complete))
             loadHomeInternal(_uiState.value.homeKind)
+            if (wasRecovery) {
+                disableAppLock()
+                resetLockFailCount()
+            }
         }
     }
 
@@ -479,10 +632,12 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             else -> Unit
         }
         val settings = _uiState.value.settings
-        val history = (listOf(normalized) + settings.searchHistory)
-            .distinct()
-            .take(6)
-        updateSettings { it.copy(searchHistory = history) }
+        if (settings.saveSearchHistory) {
+            val history = (listOf(normalized) + settings.searchHistory)
+                .distinct()
+                .take(6)
+            updateSettings { it.copy(searchHistory = history) }
+        }
         _uiState.update {
             it.copy(
                 searchDraft = normalized,
@@ -786,10 +941,12 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openIllust(illust: Illust) {
-        val history = (listOf(illust) + _uiState.value.settings.viewHistory)
-            .distinctBy { it.id }
-            .take(48)
-        updateSettings { it.copy(viewHistory = history) }
+        if (_uiState.value.settings.saveViewHistory) {
+            val history = (listOf(illust) + _uiState.value.settings.viewHistory)
+                .distinctBy { it.id }
+                .take(48)
+            updateSettings { it.copy(viewHistory = history) }
+        }
         _uiState.update { it.copy(selectedIllust = illust, selectedIllustUser = null, relatedIllusts = emptyList()) }
         detailExtrasJob?.cancel()
         detailExtrasJob = viewModelScope.launch(Dispatchers.IO) {
@@ -1217,6 +1374,14 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         _navigationRequests.tryEmit(IllustiaNavigationRequest.FavoriteTags)
     }
 
+    fun openAppLockSetup() {
+        _navigationRequests.tryEmit(IllustiaNavigationRequest.AppLockSetup)
+    }
+
+    fun openAppLockPinEntry() {
+        _navigationRequests.tryEmit(IllustiaNavigationRequest.AppLockPinEntry)
+    }
+
     fun closeFavoriteTags() {
     }
 
@@ -1432,7 +1597,6 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 val restrict = if (settings.privateBookmarkDefault) Restrict.Private else settings.bookmarkRestrict
                 val updated = repository.toggleBookmark(illust, restrict)
                 if (updated.isBookmarked) {
-                    showMessage(str(R.string.msg_bookmark_added))
                     if (settings.followOnLike && illust.artistId > 0L) {
                         repository.followUser(illust.artistId, settings.bookmarkRestrict)
                     }
@@ -1443,8 +1607,6 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     if (settings.autoDownloadOnBookmark) {
                         saveImage(updated.originalImageUrl ?: updated.imageUrl, "illustia_${updated.id}")
                     }
-                } else {
-                    showMessage(str(R.string.msg_bookmark_removed))
                 }
                 updateIllustEverywhere(updated)
             } catch (error: Throwable) {

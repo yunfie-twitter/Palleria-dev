@@ -52,9 +52,10 @@ fun SettingRow(title: String, summary: String? = null, action: @Composable () ->
 }
 
 @Composable
-fun SettingLinkRow(title: String, onClick: () -> Unit) {
+fun SettingLinkRow(title: String, summary: String? = null, onClick: () -> Unit) {
     ArrowPreference(
         title = title,
+        summary = summary ?: "",
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
     )

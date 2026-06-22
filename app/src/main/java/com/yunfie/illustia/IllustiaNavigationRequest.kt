@@ -16,4 +16,6 @@ enum class IllustiaNavigationRequest {
     AppData,
     About,
     FavoriteTags,
+    AppLockSetup,
+    AppLockPinEntry,
 }

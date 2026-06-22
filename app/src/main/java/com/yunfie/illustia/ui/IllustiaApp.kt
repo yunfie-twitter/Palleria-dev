@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
@@ -57,6 +58,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
@@ -111,6 +113,8 @@ private sealed interface AppRoute : NavKey {
     data object About : AppRoute
     data object FavoriteTags : AppRoute
     data object UserProfile : AppRoute
+    data object AppLockSetup : AppRoute
+    data object AppLockPinEntry : AppRoute
 }
 
 @Composable
@@ -187,6 +191,15 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
         }
     }
 
+    // When app becomes locked, collapse back stack to Main so no screens
+    // are reachable behind the lock overlay.
+    LaunchedEffect(state.appLocked) {
+        if (state.appLocked && state.settings.appLockEnabled) {
+            backStack.clear()
+            backStack.add(AppRoute.Main)
+        }
+    }
+
     LaunchedEffect(pagerState.currentPage) {
         selectedTab = SwipeTabs[pagerState.currentPage]
     }
@@ -224,6 +237,8 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                     IllustiaNavigationRequest.AppData -> AppRoute.AppData
                     IllustiaNavigationRequest.About -> AppRoute.About
                     IllustiaNavigationRequest.FavoriteTags -> AppRoute.FavoriteTags
+                    IllustiaNavigationRequest.AppLockSetup -> AppRoute.AppLockSetup
+                    IllustiaNavigationRequest.AppLockPinEntry -> AppRoute.AppLockPinEntry
                 },
             )
         }
@@ -422,6 +437,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
             }
             entry(AppRoute.DataSettings) {
                 DataSettingsScreen(
+                    state = state,
                     viewModel = viewModel,
                     onBack = ::popRoute,
                 )
@@ -498,6 +514,20 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                         LoadingIndicator()
                     }
                 }
+            }
+            entry(AppRoute.AppLockSetup) {
+                AppLockSetupScreen(
+                    state = state,
+                    viewModel = viewModel,
+                    onBack = ::popRoute,
+                )
+            }
+            entry(AppRoute.AppLockPinEntry) {
+                PinSetupScreen(
+                    isChange = state.settings.appLockEnabled,
+                    viewModel = viewModel,
+                    onBack = ::popRoute,
+                )
             }
         }
         val entries = rememberDecoratedNavEntries(
@@ -797,6 +827,55 @@ private fun MainSurface(
                 AppTab.Search -> SearchScreen(state = state, viewModel = viewModel)
                 AppTab.More -> MoreScreen(state = state, viewModel = viewModel)
             }
+                }
+            }
+        }
+
+        // App lock overlay — covers everything when locked
+        if (state.appLocked && state.settings.appLockEnabled) {
+            AppLockScreen(
+                biometricEnabled = state.settings.biometricEnabled,
+                failCount = state.appLockFailCount,
+                cooldownUntil = state.appLockCooldownUntil,
+                viewModel = viewModel,
+            )
+        }
+
+        // Lock recovery dialog — shown after 12 consecutive PIN failures
+        if (state.showLockRecoveryDialog) {
+            OverlayDialog(
+                show = true,
+                title = stringResource(R.string.app_lock_recovery_title),
+                summary = stringResource(R.string.app_lock_recovery_summary),
+                backgroundColor = MiuixTheme.colorScheme.surfaceContainerHighest,
+                onDismissRequest = {},
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Button(
+                        onClick = viewModel::resetAppLockData,
+                        modifier = Modifier.weight(1f),
+                        insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.app_lock_recovery_reset),
+                            color = MiuixTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Button(
+                        onClick = viewModel::openRecoveryWebLogin,
+                        modifier = Modifier.weight(1f),
+                        insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.app_lock_recovery_verify),
+                            color = MiuixTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
         }

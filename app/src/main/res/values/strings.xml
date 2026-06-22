@@ -172,6 +172,43 @@
     <string name="general_startup_screen">最初に開く画面</string>
     <string name="general_startup_screen_desc">アプリ起動時のタブを選びます</string>
 
+    <!-- App lock -->
+    <string name="app_lock_section_title">アプリロック</string>
+    <string name="app_lock_enable">アプリロック</string>
+    <string name="app_lock_enable_desc">起動時にPINコードでロックします</string>
+    <string name="app_lock_enabled">有効</string>
+    <string name="app_lock_disabled">無効</string>
+    <string name="app_lock_settings_title">アプリロック設定</string>
+    <string name="app_lock_title">PINを入力</string>
+    <string name="app_lock_incorrect">PINが正しくありません</string>
+    <string name="app_lock_biometric">生体認証</string>
+    <string name="app_lock_biometric_desc">指紋や顔認証でロックを解除します</string>
+    <string name="app_lock_biometric_title">生体認証で解除</string>
+    <string name="app_lock_biometric_subtitle">認証してください</string>
+    <string name="app_lock_timing_return">バックグラウンド復帰時もロック</string>
+    <string name="app_lock_timing_return_desc">アプリを離れて戻ってきたときもPINを要求します</string>
+    <string name="app_lock_section_pin">PINコード</string>
+    <string name="app_lock_section_options">オプション</string>
+    <string name="app_lock_set_pin">PINを設定</string>
+    <string name="app_lock_change_pin">PINを変更</string>
+    <string name="app_lock_disable">アプリロックを無効化</string>
+    <string name="app_lock_disable_title">アプリロックを無効化</string>
+    <string name="app_lock_disable_confirm">アプリロックを解除します。PINコードと生体認証の設定が削除されます。</string>
+    <string name="app_lock_enter_current">現在のPINを入力</string>
+    <string name="app_lock_enter_new">新しいPINを入力（4〜6桁）</string>
+    <string name="app_lock_confirm_new">PINを再入力</string>
+    <string name="app_lock_mismatch">PINが一致しません</string>
+    <string name="app_lock_verify_disable">無効にするにはPINを入力してください</string>
+    <string name="app_lock_verify_change_timing">ロックタイミングを変更するにはPINを入力してください</string>
+    <string name="app_lock_biometric_verify_title">生体認証の確認</string>
+    <string name="app_lock_biometric_verify_subtitle">生体認証を有効にするには認証してください</string>
+    <string name="app_lock_attempts_remaining">残り%d回試行できます</string>
+    <string name="app_lock_cooldown">%.0f秒後に再試行してください</string>
+    <string name="app_lock_recovery_title">ロックの解除方法を選択</string>
+    <string name="app_lock_recovery_summary">PINの入力に12回失敗しました。本人確認を行うか、アプリを初期化してください。</string>
+    <string name="app_lock_recovery_verify">Pixivアカウントで本人確認</string>
+    <string name="app_lock_recovery_reset">アプリを初期化</string>
+
     <!-- Image settings screen -->
     <string name="image_settings_title">画像設定</string>
     <string name="image_section_storage">保存</string>
@@ -230,6 +267,11 @@
     <!-- Data settings screen -->
     <string name="data_settings_title">データ管理</string>
     <string name="data_section_overview">データ概要</string>
+    <string name="data_section_history">履歴の保存</string>
+    <string name="data_save_view_history">閲覧履歴を保存</string>
+    <string name="data_save_view_history_desc">オフにすると作品の閲覧履歴が記録されなくなります</string>
+    <string name="data_save_search_history">検索履歴を保存</string>
+    <string name="data_save_search_history_desc">オフにすると検索履歴が記録されなくなります</string>
     <string name="data_section_transfer">バックアップと復元</string>
     <string name="data_export">データをエクスポート</string>
     <string name="data_import">データをインポート</string>

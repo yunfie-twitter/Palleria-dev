@@ -19,6 +19,7 @@ import com.yunfie.illustia.ui.components.HeaderIcon
 import com.yunfie.illustia.ui.components.PredictiveBackGestureHandler
 import com.yunfie.illustia.ui.components.Section
 import com.yunfie.illustia.ui.components.SettingDropdownRow
+import com.yunfie.illustia.ui.components.SettingLinkRow
 import com.yunfie.illustia.ui.components.SettingSwitchRow
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -89,6 +90,19 @@ fun GeneralSettingsScreen(
                     SettingSwitchRow(stringResource(R.string.general_double_back), state.settings.doubleBackToExit, viewModel::updateDoubleBackToExit, stringResource(R.string.general_double_back_desc))
                     DividerLine()
                     SettingSwitchRow(stringResource(R.string.general_secure), state.settings.secureWindow, viewModel::updateSecureWindow, stringResource(R.string.general_secure_desc))
+                }
+            }}
+
+            item { Section(stringResource(R.string.app_lock_section_title)) {
+                ElevatedPanel {
+                    SettingLinkRow(
+                        title = stringResource(R.string.app_lock_enable),
+                        onClick = { viewModel.openAppLockSetup() },
+                        summary = if (state.settings.appLockEnabled)
+                            stringResource(R.string.app_lock_enabled)
+                        else
+                            stringResource(R.string.app_lock_disabled),
+                    )
                 }
             }}
 

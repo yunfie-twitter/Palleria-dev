@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.yunfie.illustia.IllustiaUiState
 import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.R
 import com.yunfie.illustia.ui.components.DividerLine
@@ -24,6 +25,7 @@ import com.yunfie.illustia.ui.components.MiuixConfirmDialog
 import com.yunfie.illustia.ui.components.PredictiveBackGestureHandler
 import com.yunfie.illustia.ui.components.Section
 import com.yunfie.illustia.ui.components.SettingLinkRow
+import com.yunfie.illustia.ui.components.SettingSwitchRow
 import java.time.LocalDate
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -35,6 +37,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun DataSettingsScreen(
+    state: IllustiaUiState,
     viewModel: IllustiaViewModel,
     onBack: () -> Unit,
 ) {
@@ -106,6 +109,14 @@ fun DataSettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            item { Section(stringResource(R.string.data_section_history)) {
+                ElevatedPanel {
+                    SettingSwitchRow(stringResource(R.string.data_save_view_history), state.settings.saveViewHistory, viewModel::updateSaveViewHistory, stringResource(R.string.data_save_view_history_desc))
+                    DividerLine()
+                    SettingSwitchRow(stringResource(R.string.data_save_search_history), state.settings.saveSearchHistory, viewModel::updateSaveSearchHistory, stringResource(R.string.data_save_search_history_desc))
+                }
+            }}
+
             item { Section(stringResource(R.string.data_section_transfer)) {
                 ElevatedPanel(contentPadding = PaddingValues(0.dp)) {
                     SettingLinkRow(stringResource(R.string.data_export)) {
@@ -126,7 +137,7 @@ fun DataSettingsScreen(
 
             item { Section(stringResource(R.string.data_section_cleanup)) {
                 ElevatedPanel(contentPadding = PaddingValues(0.dp)) {
-                    SettingLinkRow(stringResource(R.string.data_delete_cache), { showCacheDeleteConfirm = true })
+                    SettingLinkRow(stringResource(R.string.data_delete_cache)) { showCacheDeleteConfirm = true }
                 }
             }}
         }
