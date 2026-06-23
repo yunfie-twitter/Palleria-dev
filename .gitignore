@@ -20,3 +20,4 @@ pixez/
 *.jks
 debug.keystore
 release.keystore
+mcp/
