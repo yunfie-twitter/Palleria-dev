@@ -556,7 +556,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                 show = true,
                 title = stringResource(R.string.dialog_unbookmark_title),
                 summary = stringResource(R.string.dialog_unbookmark_confirm, illust.title.ifBlank { stringResource(R.string.detail_muted_artist_blur_default) }),
-                confirmText = stringResource(R.string.action_unfollow),
+                confirmText = stringResource(R.string.action_remove_bookmark),
                 destructive = true,
                 onConfirm = viewModel::confirmBookmarkRemoval,
                 onDismiss = viewModel::cancelBookmarkRemoval,

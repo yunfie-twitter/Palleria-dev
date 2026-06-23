@@ -260,9 +260,9 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             _uiState.update { it.copy(appLocked = false) }
             viewModelScope.launch(Dispatchers.IO) {
                 val settings = _uiState.value.settings
-                if (settings.refreshToken.isNotBlank() && _uiState.value.homeItems.isEmpty()) {
+                if (settings.refreshToken.isNotBlank()) {
                     refreshCurrentAccountProfile(settings)
-                    if (settings.startupScreen == "home") {
+                    if (settings.startupScreen == "home" && _uiState.value.homeItems.isEmpty()) {
                         refreshHome()
                     }
                 }
@@ -281,9 +281,9 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.update { it.copy(appLocked = false) }
         viewModelScope.launch(Dispatchers.IO) {
             val settings = _uiState.value.settings
-            if (settings.refreshToken.isNotBlank() && _uiState.value.homeItems.isEmpty()) {
+            if (settings.refreshToken.isNotBlank()) {
                 refreshCurrentAccountProfile(settings)
-                if (settings.startupScreen == "home") {
+                if (settings.startupScreen == "home" && _uiState.value.homeItems.isEmpty()) {
                     refreshHome()
                 }
             }
@@ -294,9 +294,9 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.update { it.copy(appLocked = false) }
         viewModelScope.launch(Dispatchers.IO) {
             val settings = _uiState.value.settings
-            if (settings.refreshToken.isNotBlank() && _uiState.value.homeItems.isEmpty()) {
+            if (settings.refreshToken.isNotBlank()) {
                 refreshCurrentAccountProfile(settings)
-                if (settings.startupScreen == "home") {
+                if (settings.startupScreen == "home" && _uiState.value.homeItems.isEmpty()) {
                     refreshHome()
                 }
             }

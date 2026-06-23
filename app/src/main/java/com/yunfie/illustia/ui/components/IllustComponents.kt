@@ -132,14 +132,16 @@ fun IllustCard(
             illust.thumbnailUrl
         }
     }
-    val isAi = showAiBadge && illust.isAi
+    val cardBadgeText = remember(illust.id, showAiBadge) {
+        if (illust.isAi && !showAiBadge) null else illust.cardBadgeText
+    }
 
     IllustCardImpl(
         previewUrl = previewUrl,
         title = illust.title,
         artistName = illust.artistName,
         isBookmarked = illust.isBookmarked,
-        cardBadgeText = if (isAi) illust.cardBadgeText else null,
+        cardBadgeText = cardBadgeText,
         onBookmark = onBookmark,
         onClick = onClick,
         onLongClick = onLongClick,
