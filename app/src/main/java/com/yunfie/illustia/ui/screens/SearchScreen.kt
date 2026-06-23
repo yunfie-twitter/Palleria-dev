@@ -68,7 +68,7 @@ fun SearchScreen(
     viewModel: IllustiaViewModel,
 ) {
     var searchExpanded by remember { mutableStateOf(false) }
-    
+
     val isResultMode by remember(state.activeSearchWord) {
         derivedStateOf {
             state.activeSearchWord.isNotBlank()
@@ -174,7 +174,7 @@ private fun SearchResultsArea(
     }
     val resultPagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
-    
+
     LaunchedEffect(resultPagerState.currentPage) {
         selectedResultTab = resultPagerState.currentPage
     }

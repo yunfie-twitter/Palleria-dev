@@ -30,6 +30,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.yunfie.illustia.ui.components.LocalBottomSheetBackgroundColor
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -69,6 +72,7 @@ fun AppLockScreen(
     var unlocking by remember { mutableStateOf(false) }
     var cooldownRemaining by remember { mutableStateOf(0L) }
     var errorFlash by remember { mutableFloatStateOf(0f) }
+    var showRecoverySheet by remember { mutableStateOf(false) }
 
     // Block all back navigation while locked.
     BackHandler(enabled = true) {}
@@ -318,7 +322,21 @@ fun AppLockScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Forgot PIN? link
+            if (failCount >= 3) {
+                Text(
+                    text = stringResource(R.string.app_lock_forgot_pin),
+                    color = MiuixTheme.colorScheme.primary,
+                    style = MiuixTheme.textStyles.footnote1,
+                    modifier = Modifier
+                        .clickable { showRecoverySheet = true }
+                        .padding(vertical = 8.dp)
+                )
+            } else {
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             NumberPad(
                 onDigit = ::onDigitPressed,
@@ -326,6 +344,45 @@ fun AppLockScreen(
                 onBiometric = if (showBiometric && !unlocking && !isCooldownActive) ::triggerBiometric else null,
                 enabled = !isCooldownActive && !unlocking,
             )
+        }
+    }
+
+    if (showRecoverySheet) {
+        OverlayBottomSheet(
+            show = true,
+            onDismissRequest = { showRecoverySheet = false },
+            title = stringResource(R.string.app_lock_recovery_title),
+            backgroundColor = LocalBottomSheetBackgroundColor.current,
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.app_lock_recovery_summary),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.footnote1,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Button(
+                    onClick = {
+                        showRecoverySheet = false
+                        viewModel.openRecoveryWebLogin()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.app_lock_recovery_verify))
+                }
+                Button(
+                    onClick = {
+                        showRecoverySheet = false
+                        viewModel.resetAppLockData()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.app_lock_recovery_reset), color = MiuixTheme.colorScheme.error)
+                }
+            }
         }
     }
 }

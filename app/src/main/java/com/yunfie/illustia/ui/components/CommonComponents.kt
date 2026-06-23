@@ -401,10 +401,10 @@ fun FollowPill(isFollowed: Boolean, modifier: Modifier = Modifier) {
                 when (targetState) {
                     FollowPillStage.CHECK ->
                         (scaleIn(spring(dampingRatio = 0.45f, stiffness = 380f), initialScale = 0.3f) + fadeIn(tween(160))) togetherWith
-                        (scaleOut(tween(120), targetScale = 0.5f) + fadeOut(tween(120)))
+                                (scaleOut(tween(120), targetScale = 0.5f) + fadeOut(tween(120)))
                     FollowPillStage.FOLLOWED ->
                         (fadeIn(tween(200)) + scaleIn(tween(200), initialScale = 0.85f)) togetherWith
-                        (fadeOut(tween(140)) + scaleOut(tween(140), targetScale = 1.1f))
+                                (fadeOut(tween(140)) + scaleOut(tween(140), targetScale = 1.1f))
                     FollowPillStage.UNFOLLOWING, FollowPillStage.UNFOLLOWED ->
                         (fadeIn(tween(200))) togetherWith (fadeOut(tween(200)))
                 }
@@ -505,10 +505,10 @@ fun BookmarkHeartButton(
                     when (targetState) {
                         BookmarkButtonStage.CHECK ->
                             (scaleIn(spring(dampingRatio = 0.35f, stiffness = 300f), initialScale = 0.1f) + fadeIn(tween(100))) togetherWith
-                                (scaleOut(tween(100), targetScale = 0.5f) + fadeOut(tween(100)))
+                                    (scaleOut(tween(100), targetScale = 0.5f) + fadeOut(tween(100)))
                         BookmarkButtonStage.BOOKMARKED ->
                             (fadeIn(tween(200)) + scaleIn(tween(200), initialScale = 0.8f)) togetherWith
-                                (fadeOut(tween(100)) + scaleOut(tween(100), targetScale = 1.1f))
+                                    (fadeOut(tween(100)) + scaleOut(tween(100), targetScale = 1.1f))
                         BookmarkButtonStage.REMOVING, BookmarkButtonStage.UNBOOKMARKED ->
                             fadeIn(tween(150)) togetherWith fadeOut(tween(150))
                     }

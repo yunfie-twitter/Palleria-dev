@@ -78,6 +78,10 @@
     <string name="bookmark_tab_bookmarks">Bookmarks</string>
     <string name="bookmark_tab_watchlist">Watchlist</string>
     <string name="bookmark_tab_following">Following</string>
+    <string name="bookmark_view_all">All</string>
+    <string name="bookmark_view_artist">By Artist</string>
+    <string name="bookmark_tag_unclassified">Unclassified</string>
+    <string name="bookmark_tag_watch_later">Watch Later</string>
     <string name="bookmark_empty">No bookmarks</string>
     <string name="bookmark_following_empty">No works from followed users</string>
     <string name="watchlist_empty">Add tags from the save button in search results</string>
@@ -204,6 +208,7 @@
     <string name="app_lock_biometric_verify_subtitle">Authenticate to enable biometric unlock</string>
     <string name="app_lock_attempts_remaining">%d attempts remaining</string>
     <string name="app_lock_cooldown">Try again in %.0f seconds</string>
+    <string name="app_lock_forgot_pin">Forgot PIN?</string>
     <string name="app_lock_recovery_title">Choose Recovery Method</string>
     <string name="app_lock_recovery_summary">You have failed to enter the PIN 12 times. Verify your identity or reset the app.</string>
     <string name="app_lock_recovery_verify">Verify with Pixiv account</string>
@@ -371,6 +376,7 @@
     <string name="msg_double_back_exit">Press back again to exit</string>
     <string name="msg_data_exported">Data exported.</string>
     <string name="msg_data_imported">Data imported.</string>
+    <string name="msg_added_to_folder">Added to folder.</string>
 
     <!-- Error messages (user-facing) -->
     <string name="error_save_failed">Failed to save.</string>
@@ -424,4 +430,8 @@
     <string name="action_sort">Sort</string>
     <string name="account_remove_title">Remove account</string>
     <string name="account_remove_summary">Remove “%1$s” from this device?</string>
+    <string name="artist_folder_add">Create Folder</string>
+    <string name="artist_folder_name">Folder Name</string>
+    <string name="artist_folder_manage">Manage Folders</string>
+    <string name="artist_folder_add_to">Add to Folder</string>
 </resources>

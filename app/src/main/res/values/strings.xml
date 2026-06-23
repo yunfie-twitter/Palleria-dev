@@ -78,6 +78,10 @@
     <string name="bookmark_tab_bookmarks">ブックマーク</string>
     <string name="bookmark_tab_watchlist">Watchlist</string>
     <string name="bookmark_tab_following">フォロー中</string>
+    <string name="bookmark_view_all">すべて</string>
+    <string name="bookmark_view_artist">作者別</string>
+    <string name="bookmark_tag_unclassified">未分類</string>
+    <string name="bookmark_tag_watch_later">あとで見る</string>
     <string name="bookmark_empty">ブックマークはまだありません</string>
     <string name="bookmark_following_empty">フォロー中ユーザーの作品はまだありません</string>
     <string name="watchlist_empty">検索結果の保存ボタンからタグを追加できます</string>
@@ -204,6 +208,7 @@
     <string name="app_lock_biometric_verify_subtitle">生体認証を有効にするには認証してください</string>
     <string name="app_lock_attempts_remaining">残り%d回試行できます</string>
     <string name="app_lock_cooldown">%.0f秒後に再試行してください</string>
+    <string name="app_lock_forgot_pin">PINを忘れましたか？</string>
     <string name="app_lock_recovery_title">ロックの解除方法を選択</string>
     <string name="app_lock_recovery_summary">PINの入力に12回失敗しました。本人確認を行うか、アプリを初期化してください。</string>
     <string name="app_lock_recovery_verify">Pixivアカウントで本人確認</string>
@@ -371,6 +376,7 @@
     <string name="msg_double_back_exit">もう一度戻ると終了します</string>
     <string name="msg_data_exported">データをエクスポートしました。</string>
     <string name="msg_data_imported">データをインポートしました。</string>
+    <string name="msg_added_to_folder">フォルダに追加しました。</string>
 
     <!-- Error messages (user-facing) -->
     <string name="error_save_failed">保存に失敗しました。</string>
@@ -424,4 +430,8 @@
     <string name="action_sort">並べ替え</string>
     <string name="account_remove_title">アカウントを削除</string>
     <string name="account_remove_summary">「%1$s」をこの端末から削除しますか？</string>
+    <string name="artist_folder_add">フォルダを作成</string>
+    <string name="artist_folder_name">フォルダ名</string>
+    <string name="artist_folder_manage">フォルダ管理</string>
+    <string name="artist_folder_add_to">フォルダに追加</string>
 </resources>

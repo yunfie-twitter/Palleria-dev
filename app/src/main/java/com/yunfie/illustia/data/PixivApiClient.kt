@@ -16,7 +16,7 @@ import okhttp3.Request
 class PixivApiClient(
     private val httpClient: OkHttpClient = createPixivHttpClient(),
 ) {
-    private val json = Json { 
+    private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
         coerceInputValues = true

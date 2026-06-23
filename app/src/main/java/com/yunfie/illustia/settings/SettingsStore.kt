@@ -68,7 +68,7 @@ data class AppSettings(
     val viewHistory: List<Illust> = emptyList(),
     val smoothTransitions: Boolean = true,
     val prefetchImages: Boolean = false,
-    val notchOptimization: Boolean = false,
+    val notchOptimization: Boolean = true,
     val confirmOnLongPressSave: Boolean = true,
     val doubleBackToExit: Boolean = false,
     val swipeToSwitchWorks: Boolean = true,
@@ -271,7 +271,7 @@ class SettingsStore(context: Context) {
             }.take(MAX_VIEW_HISTORY),
             smoothTransitions = preferences[SMOOTH_TRANSITIONS] ?: true,
             prefetchImages = preferences[PREFETCH_IMAGES] ?: false,
-            notchOptimization = preferences[NOTCH_OPTIMIZATION] ?: false,
+            notchOptimization = preferences[NOTCH_OPTIMIZATION] ?: true,
             confirmOnLongPressSave = preferences[CONFIRM_ON_LONG_PRESS_SAVE] ?: true,
             doubleBackToExit = preferences[DOUBLE_BACK_TO_EXIT] ?: false,
             swipeToSwitchWorks = preferences[SWIPE_TO_SWITCH_WORKS] ?: true,
@@ -488,7 +488,7 @@ class SettingsStore(context: Context) {
             viewHistory = decodeHistoryIllusts(preferences.getString(KEY_VIEW_HISTORY, "")).take(MAX_VIEW_HISTORY),
             smoothTransitions = preferences.getBoolean(KEY_SMOOTH_TRANSITIONS, true),
             prefetchImages = preferences.getBoolean(KEY_PREFETCH_IMAGES, false),
-            notchOptimization = preferences.getBoolean("notchOptimization", false),
+            notchOptimization = preferences.getBoolean("notchOptimization", true),
             confirmOnLongPressSave = preferences.getBoolean("confirmOnLongPressSave", true),
             doubleBackToExit = preferences.getBoolean("doubleBackToExit", false),
             swipeToSwitchWorks = preferences.getBoolean("swipeToSwitchWorks", true),
@@ -844,7 +844,7 @@ class SettingsStore(context: Context) {
                     .first()[APP_LANGUAGE]
             } ?: appContext.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(KEY_APP_LANGUAGE, "system")
-                ?: "system"
+            ?: "system"
         }
     }
 }

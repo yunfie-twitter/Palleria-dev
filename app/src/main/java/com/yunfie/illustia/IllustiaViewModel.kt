@@ -1778,9 +1778,9 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         if (statusCode != 400) return false
         val message = apiMessage.lowercase()
         return message.contains("oauth") ||
-            message.contains("token") ||
-            message.contains("invalid_grant") ||
-            message.contains("invalid refresh")
+                message.contains("token") ||
+                message.contains("invalid_grant") ||
+                message.contains("invalid refresh")
     }
 
     private fun updateIllustEverywhere(updated: Illust) {

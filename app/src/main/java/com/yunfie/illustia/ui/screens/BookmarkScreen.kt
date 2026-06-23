@@ -117,7 +117,7 @@ fun BookmarkScreen(
                     RestrictPill(
                         restrict = settings.bookmarkRestrict,
                         onClick = {
-                    val next = if (settings.bookmarkRestrict == Restrict.Public) {
+                            val next = if (settings.bookmarkRestrict == Restrict.Public) {
                                 Restrict.Private
                             } else {
                                 Restrict.Public
@@ -127,53 +127,53 @@ fun BookmarkScreen(
                         },
                     )
                 }
-                    if (selectedTopTab == 2) {
-                        val newestLabel = stringResource(R.string.sort_date_desc)
-                        val oldestLabel = stringResource(R.string.sort_date_asc)
-                        val nameLabel = stringResource(R.string.sort_name_asc)
-                        WindowIconDropdownMenu(
-                            entry = DropdownEntry(
-                                items = listOf(
-                                    DropdownItem(
-                                        text = if (followingUserSort == FollowingUserSort.Newest) "✓ $newestLabel" else newestLabel,
-                                        onClick = { followingUserSort = FollowingUserSort.Newest },
-                                    ),
-                                    DropdownItem(
-                                        text = if (followingUserSort == FollowingUserSort.Oldest) "✓ $oldestLabel" else oldestLabel,
-                                        onClick = { followingUserSort = FollowingUserSort.Oldest },
-                                    ),
-                                    DropdownItem(
-                                        text = if (followingUserSort == FollowingUserSort.Name) "✓ $nameLabel" else nameLabel,
-                                        onClick = { followingUserSort = FollowingUserSort.Name },
-                                    ),
+                if (selectedTopTab == 2) {
+                    val newestLabel = stringResource(R.string.sort_date_desc)
+                    val oldestLabel = stringResource(R.string.sort_date_asc)
+                    val nameLabel = stringResource(R.string.sort_name_asc)
+                    WindowIconDropdownMenu(
+                        entry = DropdownEntry(
+                            items = listOf(
+                                DropdownItem(
+                                    text = if (followingUserSort == FollowingUserSort.Newest) "✓ $newestLabel" else newestLabel,
+                                    onClick = { followingUserSort = FollowingUserSort.Newest },
+                                ),
+                                DropdownItem(
+                                    text = if (followingUserSort == FollowingUserSort.Oldest) "✓ $oldestLabel" else oldestLabel,
+                                    onClick = { followingUserSort = FollowingUserSort.Oldest },
+                                ),
+                                DropdownItem(
+                                    text = if (followingUserSort == FollowingUserSort.Name) "✓ $nameLabel" else nameLabel,
+                                    onClick = { followingUserSort = FollowingUserSort.Name },
                                 ),
                             ),
-                        ) {
-                            Icon(MiuixIcons.Filter, contentDescription = stringResource(R.string.action_sort))
-                        }
+                        ),
+                    ) {
+                        Icon(MiuixIcons.Filter, contentDescription = stringResource(R.string.action_sort))
                     }
-                    IconButton(onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        when (selectedTopTab) {
-                            0 -> viewModel.refreshTimeline()
-                            2 -> viewModel.refreshFollowingUsers()
-                            else -> viewModel.refreshBookmarks()
-                        }
-                    }) {
-                        Icon(MiuixIcons.Refresh, contentDescription = stringResource(R.string.dialog_reload))
+                }
+                IconButton(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    when (selectedTopTab) {
+                        0 -> viewModel.refreshTimeline()
+                        2 -> viewModel.refreshFollowingUsers()
+                        else -> viewModel.refreshBookmarks()
                     }
-                },
-                bottomContent = {
-                    CompactBookmarkTabs(
-                        selectedTab = selectedTopTab,
-                        onSelect = { index ->
-                            selectedTopTab = index
-                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                        },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-                    )
-                },
-            )
+                }) {
+                    Icon(MiuixIcons.Refresh, contentDescription = stringResource(R.string.dialog_reload))
+                }
+            },
+            bottomContent = {
+                CompactBookmarkTabs(
+                    selectedTab = selectedTopTab,
+                    onSelect = { index ->
+                        selectedTopTab = index
+                        coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                )
+            },
+        )
         Surface(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             color = MiuixTheme.colorScheme.surface,
