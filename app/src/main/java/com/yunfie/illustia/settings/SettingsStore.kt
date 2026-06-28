@@ -44,6 +44,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 
+private const val DEFAULT_SEED_COLOR = 0xFF42A5F5L
+
 @Immutable
 data class AppSettings(
     val refreshToken: String = "",
@@ -51,6 +53,8 @@ data class AppSettings(
     val appLanguage: String = "system",
     val appFont: String = "system",
     val themeMode: String = "system",
+    val useDynamicColor: Boolean = true,
+    val seedColor: Long = DEFAULT_SEED_COLOR,
     val onboardingSetupCompleted: Boolean = false,
     val allowR18: Boolean = false,
     val highQualityImages: Boolean = true,
@@ -96,6 +100,7 @@ data class AppSettings(
     val startupScreen: String = "home",
     val offlineWifiOnly: Boolean = true,
     val offlineStorageLimitBytes: Long = 5L * 1024 * 1024 * 1024,
+    val userProfileBottomSheetEnabled: Boolean = false,
     val verticalColumnCount: Int = 2,
     val horizontalColumnCount: Int = 4,
     val pixivImageProxyBaseUrl: String = "",
@@ -358,6 +363,8 @@ class SettingsStore(context: Context) {
             appLanguage = preferences[APP_LANGUAGE] ?: "system",
             appFont = preferences[APP_FONT] ?: "system",
             themeMode = preferences[THEME_MODE] ?: "system",
+            useDynamicColor = preferences[USE_DYNAMIC_COLOR] ?: true,
+            seedColor = preferences[SEED_COLOR] ?: DEFAULT_SEED_COLOR,
             onboardingSetupCompleted = preferences[ONBOARDING_SETUP_COMPLETED] ?: false,
             allowR18 = preferences[ALLOW_R18] ?: false,
             highQualityImages = preferences[HIGH_QUALITY_IMAGES] ?: true,
@@ -409,6 +416,7 @@ class SettingsStore(context: Context) {
             startupScreen = preferences[STARTUP_SCREEN] ?: "home",
             offlineWifiOnly = preferences[OFFLINE_WIFI_ONLY] ?: true,
             offlineStorageLimitBytes = preferences[OFFLINE_STORAGE_LIMIT_BYTES] ?: DEFAULT_OFFLINE_STORAGE_LIMIT_BYTES,
+            userProfileBottomSheetEnabled = preferences[USER_PROFILE_BOTTOM_SHEET_ENABLED] ?: false,
             verticalColumnCount = preferences[VERTICAL_COLUMN_COUNT] ?: 2,
             horizontalColumnCount = preferences[HORIZONTAL_COLUMN_COUNT] ?: 4,
             pixivImageProxyBaseUrl = preferences[PIXIV_IMAGE_PROXY_BASE_URL].orEmpty(),
@@ -432,6 +440,8 @@ class SettingsStore(context: Context) {
         preferences[APP_LANGUAGE] = settings.appLanguage
         preferences[APP_FONT] = settings.appFont
         preferences[THEME_MODE] = settings.themeMode
+        preferences[USE_DYNAMIC_COLOR] = settings.useDynamicColor
+        preferences[SEED_COLOR] = settings.seedColor
         preferences[ONBOARDING_SETUP_COMPLETED] = settings.onboardingSetupCompleted
         preferences[ALLOW_R18] = settings.allowR18
         preferences[HIGH_QUALITY_IMAGES] = settings.highQualityImages
@@ -477,6 +487,7 @@ class SettingsStore(context: Context) {
         preferences[STARTUP_SCREEN] = settings.startupScreen
         preferences[OFFLINE_WIFI_ONLY] = settings.offlineWifiOnly
         preferences[OFFLINE_STORAGE_LIMIT_BYTES] = settings.offlineStorageLimitBytes
+        preferences[USER_PROFILE_BOTTOM_SHEET_ENABLED] = settings.userProfileBottomSheetEnabled
         preferences[VERTICAL_COLUMN_COUNT] = settings.verticalColumnCount
         preferences[HORIZONTAL_COLUMN_COUNT] = settings.horizontalColumnCount
         preferences[PIXIV_IMAGE_PROXY_BASE_URL] = settings.pixivImageProxyBaseUrl
@@ -605,6 +616,8 @@ class SettingsStore(context: Context) {
             appLanguage = preferences.getString(KEY_APP_LANGUAGE, "system") ?: "system",
             appFont = preferences.getString(KEY_APP_FONT, "system") ?: "system",
             themeMode = preferences.getString(KEY_THEME_MODE, "system") ?: "system",
+            useDynamicColor = preferences.getBoolean(KEY_USE_DYNAMIC_COLOR, true),
+            seedColor = preferences.getLong(KEY_SEED_COLOR, DEFAULT_SEED_COLOR),
             onboardingSetupCompleted = preferences.getBoolean(KEY_ONBOARDING_SETUP_COMPLETED, false),
             allowR18 = preferences.getBoolean(KEY_ALLOW_R18, false),
             highQualityImages = preferences.getBoolean(KEY_HIGH_QUALITY, true),
@@ -648,6 +661,7 @@ class SettingsStore(context: Context) {
             fullscreenQuality = preferences.getString("fullscreenQuality", "high") ?: "high",
             viewerThumbnailsInToolbar = preferences.getBoolean("viewerThumbnailsInToolbar", false),
             startupScreen = preferences.getString("startupScreen", "home") ?: "home",
+            userProfileBottomSheetEnabled = preferences.getBoolean("userProfileBottomSheetEnabled", false),
             verticalColumnCount = preferences.getInt("verticalColumnCount", 2),
             horizontalColumnCount = preferences.getInt("horizontalColumnCount", 4),
             pixivImageProxyBaseUrl = preferences.getString(KEY_PIXIV_IMAGE_PROXY_BASE_URL, "").orEmpty(),
@@ -895,13 +909,15 @@ class SettingsStore(context: Context) {
         private const val KEY_APP_LANGUAGE = "appLanguage"
         private const val KEY_APP_FONT = "appFont"
         private const val KEY_THEME_MODE = "themeMode"
+        private const val KEY_USE_DYNAMIC_COLOR = "useDynamicColor"
+        private const val KEY_SEED_COLOR = "seedColor"
         private const val KEY_ONBOARDING_SETUP_COMPLETED = "onboardingSetupCompleted"
         private const val KEY_SMOOTH_TRANSITIONS = "smoothTransitions"
         private const val KEY_PREFETCH_IMAGES = "prefetchImages"
         private const val KEY_PIXIV_IMAGE_PROXY_BASE_URL = "pixivImageProxyBaseUrl"
         private const val KEY_OFFLINE_WIFI_ONLY = "offlineWifiOnly"
         private const val KEY_OFFLINE_STORAGE_LIMIT_BYTES = "offlineStorageLimitBytes"
-        private const val CURRENT_SETTINGS_VERSION = 6
+        private const val CURRENT_SETTINGS_VERSION = 7
         private const val HISTORY_SEPARATOR = '\u001F'
         private const val FIELD_SEPARATOR = '\u001E'
         private const val MAX_SEARCH_HISTORY = 6
@@ -913,6 +929,8 @@ class SettingsStore(context: Context) {
         private val APP_LANGUAGE = stringPreferencesKey(KEY_APP_LANGUAGE)
         private val APP_FONT = stringPreferencesKey(KEY_APP_FONT)
         private val THEME_MODE = stringPreferencesKey(KEY_THEME_MODE)
+        private val USE_DYNAMIC_COLOR = booleanPreferencesKey(KEY_USE_DYNAMIC_COLOR)
+        private val SEED_COLOR = longPreferencesKey(KEY_SEED_COLOR)
         private val ONBOARDING_SETUP_COMPLETED = booleanPreferencesKey(KEY_ONBOARDING_SETUP_COMPLETED)
         private val ALLOW_R18 = booleanPreferencesKey(KEY_ALLOW_R18)
         private val HIGH_QUALITY_IMAGES = booleanPreferencesKey(KEY_HIGH_QUALITY)
@@ -958,6 +976,7 @@ class SettingsStore(context: Context) {
         private val STARTUP_SCREEN = stringPreferencesKey("startupScreen")
         private val OFFLINE_WIFI_ONLY = booleanPreferencesKey(KEY_OFFLINE_WIFI_ONLY)
         private val OFFLINE_STORAGE_LIMIT_BYTES = longPreferencesKey(KEY_OFFLINE_STORAGE_LIMIT_BYTES)
+        private val USER_PROFILE_BOTTOM_SHEET_ENABLED = booleanPreferencesKey("userProfileBottomSheetEnabled")
         private val VERTICAL_COLUMN_COUNT = intPreferencesKey("verticalColumnCount")
         private val HORIZONTAL_COLUMN_COUNT = intPreferencesKey("horizontalColumnCount")
         private val PIXIV_IMAGE_PROXY_BASE_URL = stringPreferencesKey(KEY_PIXIV_IMAGE_PROXY_BASE_URL)

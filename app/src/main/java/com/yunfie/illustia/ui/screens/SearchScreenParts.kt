@@ -49,6 +49,7 @@ import com.yunfie.illustia.ui.components.SectionHeader
 import com.yunfie.illustia.ui.components.SettingSwitchRow
 import com.yunfie.illustia.ui.components.TagTile
 import com.yunfie.illustia.ui.components.adaptiveIllustColumns
+import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -187,7 +188,11 @@ internal fun SearchResultGrid(
             }
             if (state.searchNextUrl != null) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Button(onClick = viewModel::loadMoreSearch, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    Button(
+                        onClick = viewModel::loadMoreSearch,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        colors = overlayActionButtonColors(),
+                    ) {
                         Text(stringResource(R.string.action_load_more))
                     }
                 }
@@ -208,7 +213,11 @@ internal fun SearchResultGrid(
             }
             if (state.userSearchNextUrl != null) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Button(onClick = viewModel::loadMoreUserSearch, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    Button(
+                        onClick = viewModel::loadMoreUserSearch,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        colors = overlayActionButtonColors(),
+                    ) {
                         Text(stringResource(R.string.action_load_more))
                     }
                 }

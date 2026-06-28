@@ -113,10 +113,16 @@ fun SearchScreen(
             // Search bar area (no TopAppBar title spacing)
             if (isResultMode && !searchExpanded) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    HeaderIcon(MiuixIcons.Back, onClick = onClearResults)
+                    HeaderIcon(
+                        MiuixIcons.Back,
+                        onClick = onClearResults,
+                        modifier = Modifier.height(56.dp),
+                    )
                     SearchToolbar(
                         value = state.activeSearchWord,
                         expanded = false,
@@ -167,6 +173,7 @@ private fun SearchResultsArea(
     state: IllustiaUiState,
     viewModel: IllustiaViewModel,
 ) {
+    val scheme = MiuixTheme.colorScheme
     var selectedResultTab by remember { mutableStateOf(0) }
     var showOptionsSheet by remember { mutableStateOf(false) }
     val tabIllust = stringResource(R.string.search_tab_illust)
@@ -188,21 +195,39 @@ private fun SearchResultsArea(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TabRow(
-                tabs = tabs,
-                selectedTabIndex = selectedResultTab,
-                onTabSelected = { index ->
-                    selectedResultTab = index
-                    coroutineScope.launch { resultPagerState.animateScrollToPage(index) }
-                },
-                modifier = Modifier.weight(1f),
-            )
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+            if (state.settings.amoledMode) {
+                TabRow(
+                    tabs = tabs,
+                    selectedTabIndex = selectedResultTab,
+                    onTabSelected = { index ->
+                        selectedResultTab = index
+                        coroutineScope.launch { resultPagerState.animateScrollToPage(index) }
+                    },
+                    colors = TabRowDefaults.tabRowColors(
+                        backgroundColor = scheme.surfaceContainer.copy(alpha = 0.88f),
+                        contentColor = scheme.onSurfaceVariantSummary,
+                        selectedBackgroundColor = scheme.surfaceContainerHigh,
+                        selectedContentColor = scheme.onBackground,
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                TabRow(
+                    tabs = tabs,
+                    selectedTabIndex = selectedResultTab,
+                    onTabSelected = { index ->
+                        selectedResultTab = index
+                        coroutineScope.launch { resultPagerState.animateScrollToPage(index) }
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
             IconButton(onClick = { showOptionsSheet = true }) {
                 Icon(
                     imageVector = MiuixIcons.Filter,

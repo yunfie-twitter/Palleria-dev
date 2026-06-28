@@ -27,6 +27,7 @@
     <string name="action_view_all">View All</string>
     <string name="action_show">Show</string>
     <string name="action_add">Add</string>
+    <string name="action_enable">Enable</string>
     <string name="active">Active</string>
 
     <!-- Home screen -->
@@ -173,6 +174,18 @@
     <string name="general_section_display">Display</string>
     <string name="general_section_interaction">Interaction</string>
     <string name="general_section_startup">Startup</string>
+    <string name="general_theme">Theme</string>
+    <string name="general_theme_desc">Switch the app-wide brightness mode</string>
+    <string name="general_amoled">AMOLED</string>
+    <string name="general_amoled_desc">Use black backgrounds and surfaces in dark theme</string>
+    <string name="general_experimental_feature">Experimental Feature</string>
+    <string name="general_amoled_warning_desc">AMOLED is an experimental feature. It changes dark-theme backgrounds and surfaces to black, which can significantly change the appearance. Continue?</string>
+    <string name="general_dynamic_color">Dynamic Color</string>
+    <string name="general_dynamic_color_desc">Apply the device system color palette to the app</string>
+    <string name="general_seed_color">Seed Color</string>
+    <string name="general_seed_color_dialog_title">Seed Color</string>
+    <string name="general_seed_color_dialog_desc">Choose the base color used when Dynamic Color is off</string>
+    <string name="general_seed_color_presets">Presets</string>
     <string name="general_language">App Language</string>
     <string name="general_language_desc">Changes both the Palleria UI language and the Pixiv API language</string>
     <string name="general_r18">Show R-18 Content</string>

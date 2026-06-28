@@ -1,28 +1,23 @@
 package com.yunfie.illustia.ui.screens
 
-import io.kotest.core.annotation.Tags
-import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.property.Arb
-import io.kotest.property.PropTestConfig
-import io.kotest.property.arbitrary.char
-import io.kotest.property.arbitrary.choice
-import io.kotest.property.arbitrary.string
-import io.kotest.property.checkAll
+import org.junit.jupiter.api.Test
+import kotlin.random.Random
 
-@Tags("Feature: privacy-mode, Property 9: 無効式の評価は null を返す")
-class CalculatorEngineProperty9Test : FreeSpec({
-    val invalidSymbolArb = Arb.choice(
-        Arb.char('a', 'z'),
-        Arb.char('A', 'Z'),
-        Arb.choice('!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '=', '?', '~'),
-    )
+class CalculatorEngineProperty9Test {
 
-    val invalidExprArb = Arb.string(1..12, invalidSymbolArb)
+    private val invalidChars = ('a'..'z') + ('A'..'Z') + listOf('!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '=', '?', '~')
 
-    "Property 9: 無効式の評価は null を返す" {
-        checkAll(PropTestConfig(iterations = 100), invalidExprArb) { expr ->
+    @Test
+    fun `Property 9 無効式の評価は null を返す`() {
+        repeat(100) {
+            val length = Random.nextInt(1, 13)
+            val expr = buildString(length) {
+                repeat(length) {
+                    append(invalidChars.random())
+                }
+            }
             CalculatorEngine.evaluate(expr) shouldBe null
         }
     }
-})
+}

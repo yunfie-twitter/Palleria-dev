@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yunfie.illustia.CalculatorHistoryEntry
 import com.yunfie.illustia.IllustiaViewModel
+import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
@@ -198,6 +199,7 @@ fun CalculatorScreen(
                                 showCornerUnlockDialog = false
                                 cornerUnlockCode = ""
                             },
+                            colors = overlayActionButtonColors(),
                         ) {
                             Text("キャンセル")
                         }
@@ -210,6 +212,7 @@ fun CalculatorScreen(
                                 // 照合失敗: ダイアログを閉じるだけ、フィードバックなし (Req 4.7)
                                 viewModel.verifyAndUnlockPrivacy(code)
                             },
+                            colors = overlayActionButtonColors(),
                         ) {
                             Text("確認", fontWeight = FontWeight.Bold)
                         }

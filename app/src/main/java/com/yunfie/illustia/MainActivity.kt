@@ -35,14 +35,12 @@ import androidx.compose.ui.text.font.FontWeight
 import com.yunfie.illustia.nativebridge.NativeIntentRouter
 import com.yunfie.illustia.settings.SettingsStore
 import com.yunfie.illustia.settings.AppFont
+import com.yunfie.illustia.settings.rememberAppThemeColors
 import com.yunfie.illustia.settings.appLanguageLocaleList
-import com.yunfie.illustia.settings.appThemeColorSchemeMode
 import com.yunfie.illustia.ui.IllustiaApp
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.defaultTextStyles
 import top.yukonga.miuix.kmp.theme.TextStyles
-import top.yukonga.miuix.kmp.theme.ThemeController
 
 class MainActivity : FragmentActivity() {
     private val viewModel by viewModels<IllustiaViewModel> {
@@ -124,11 +122,7 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            val controller = remember(state.settings.themeMode) {
-                ThemeController(
-                    colorSchemeMode = appThemeColorSchemeMode(state.settings.themeMode),
-                )
-            }
+            val themeColors = rememberAppThemeColors(state.settings)
 
             LaunchedEffect(state.settings.secureWindow) {
                 applySecureWindow(state.settings.secureWindow)
@@ -177,7 +171,7 @@ class MainActivity : FragmentActivity() {
             val textStyles = remember(state.settings.appFont) {
                 resolveAppTextStyles(fontFamily)
             }
-            MiuixTheme(controller = controller, textStyles = textStyles) {
+            MiuixTheme(colors = themeColors, textStyles = textStyles) {
                 CompositionLocalProvider(
                     LocalTextStyle provides LocalTextStyle.current.merge(TextStyle(fontFamily = fontFamily)),
                 ) {

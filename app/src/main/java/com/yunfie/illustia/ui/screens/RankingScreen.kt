@@ -111,14 +111,37 @@ fun RankingScreen(
                 }
             },
             bottomContent = {
-                RankingModeTabs(
-                    currentMode = modes[pagerState.targetPage],
-                    onSelectMode = { newMode ->
-                        val index = modes.indexOf(newMode).coerceAtLeast(0)
-                        coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                    },
-                    modes = modes,
-                )
+                if (settings.amoledMode) {
+                    RankingModeTabs(
+                        currentMode = modes[pagerState.targetPage],
+                        onSelectMode = { newMode ->
+                            val index = modes.indexOf(newMode).coerceAtLeast(0)
+                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                        },
+                        modes = modes,
+                    )
+                } else {
+                    TabRow(
+                        tabs = listOf(
+                            stringResource(R.string.ranking_day),
+                            stringResource(R.string.ranking_day_male),
+                            stringResource(R.string.ranking_day_female),
+                            stringResource(R.string.ranking_week),
+                            stringResource(R.string.ranking_month),
+                            stringResource(R.string.ranking_week_rookie),
+                            stringResource(R.string.ranking_day_ai),
+                        ),
+                        selectedTabIndex = modes.indexOf(modes[pagerState.targetPage]).coerceAtLeast(0),
+                        onTabSelected = { index ->
+                            val newMode = modes.getOrNull(index) ?: return@TabRow
+                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                            if (newMode != mode) viewModel.selectRankingMode(newMode)
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                        minWidth = 92.dp,
+                        maxWidth = 148.dp,
+                    )
+                }
             },
         )
         Surface(
@@ -158,6 +181,7 @@ private fun RankingModeTabs(
     onSelectMode: (String) -> Unit,
     modes: List<String>,
 ) {
+    val scheme = MiuixTheme.colorScheme
     val tabLabels = listOf(
         stringResource(R.string.ranking_day),
         stringResource(R.string.ranking_day_male),
@@ -171,6 +195,12 @@ private fun RankingModeTabs(
         tabs = tabLabels,
         selectedTabIndex = modes.indexOf(currentMode).coerceAtLeast(0),
         onTabSelected = { index -> modes.getOrNull(index)?.let(onSelectMode) },
+        colors = TabRowDefaults.tabRowColors(
+            backgroundColor = scheme.surfaceContainer.copy(alpha = 0.88f),
+            contentColor = scheme.onSurfaceVariantSummary,
+            selectedBackgroundColor = scheme.surfaceContainerHigh,
+            selectedContentColor = scheme.onBackground,
+        ),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
         minWidth = 92.dp,
         maxWidth = 148.dp,

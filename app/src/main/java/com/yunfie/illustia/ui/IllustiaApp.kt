@@ -656,6 +656,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                                 viewModel.openIllust(illust)
                             },
                             modifier = Modifier.fillMaxWidth(),
+                            colors = overlayActionButtonColors(),
                         ) {
                             Text(stringResource(R.string.dialog_show_detail))
                         }
@@ -665,6 +666,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                                 viewModel.toggleBookmark(illust)
                             },
                             modifier = Modifier.fillMaxWidth(),
+                            colors = overlayActionButtonColors(),
                         ) {
                             Text(if (illust.isBookmarked) stringResource(R.string.action_remove_bookmark) else stringResource(R.string.action_bookmark))
                         }
@@ -674,6 +676,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                                 viewModel.saveImage(illust.originalImageUrl ?: illust.imageUrl, "illustia_${illust.id}")
                             },
                             modifier = Modifier.fillMaxWidth(),
+                            colors = overlayActionButtonColors(),
                         ) {
                             Text(stringResource(R.string.detail_save_image))
                         }
@@ -684,6 +687,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                                     viewModel.muteIllust(illust.id)
                                 },
                                 modifier = Modifier.weight(1f),
+                                colors = overlayActionButtonColors(),
                             ) {
                                 Text(stringResource(R.string.detail_mute_work), color = MiuixTheme.colorScheme.error)
                             }
@@ -693,6 +697,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                                     viewModel.muteUser(illust.artistId)
                                 },
                                 modifier = Modifier.weight(1f),
+                                colors = overlayActionButtonColors(),
                             ) {
                                 Text(stringResource(R.string.detail_mute_artist), color = MiuixTheme.colorScheme.error)
                             }
@@ -957,6 +962,7 @@ private fun MainSurface(
                         onClick = viewModel::resetAppLockData,
                         modifier = Modifier.weight(1f),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                        colors = overlayActionButtonColors(),
                     ) {
                         Text(
                             stringResource(R.string.app_lock_recovery_reset),
@@ -968,6 +974,7 @@ private fun MainSurface(
                         onClick = viewModel::openRecoveryWebLogin,
                         modifier = Modifier.weight(1f),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                        colors = overlayActionButtonColors(),
                     ) {
                         Text(
                             stringResource(R.string.app_lock_recovery_verify),

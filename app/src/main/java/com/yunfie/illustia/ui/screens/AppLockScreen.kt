@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.yunfie.illustia.ui.components.LocalBottomSheetBackgroundColor
+import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import androidx.compose.ui.draw.alpha
@@ -370,6 +371,7 @@ fun AppLockScreen(
                         viewModel.openRecoveryWebLogin()
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = overlayActionButtonColors(),
                 ) {
                     Text(stringResource(R.string.app_lock_recovery_verify))
                 }
@@ -379,6 +381,7 @@ fun AppLockScreen(
                         viewModel.resetAppLockData()
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = overlayActionButtonColors(),
                 ) {
                     Text(stringResource(R.string.app_lock_recovery_reset), color = MiuixTheme.colorScheme.error)
                 }

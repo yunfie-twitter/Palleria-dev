@@ -1,22 +1,13 @@
 package com.yunfie.illustia.settings
 
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
-import io.kotest.property.Arb
-import io.kotest.property.PropTestConfig
-import io.kotest.property.arbitrary.choice
-import io.kotest.property.arbitrary.string
-import io.kotest.property.checkAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.annotation.Config
-import org.robolectric.junit5.RobolectricExtension
+import kotlin.random.Random
 
-@ExtendWith(RobolectricExtension::class)
-@Config(manifest = Config.NONE)
 class SettingsStorePrivacyModePropertyTest {
 
     private val allowedChars = listOf(
@@ -24,14 +15,8 @@ class SettingsStorePrivacyModePropertyTest {
         '+', '-', '*', '×', '/', '÷', '.', '='
     )
 
-    private val validUnlockCodeArb = Arb.string(4..20, allowedChars)
-    private val invalidLengthUnlockCodeArb = Arb.choice(
-        Arb.string(0..3, allowedChars),
-        Arb.string(21..30, allowedChars),
-    )
-
     private val context: Context
-        get() = RuntimeEnvironment.getApplication()
+        get() = ApplicationProvider.getApplicationContext<Context>()
 
     private lateinit var settingsStore: SettingsStore
 
@@ -43,10 +28,8 @@ class SettingsStorePrivacyModePropertyTest {
 
     @Test
     fun `Property 1 解除コードのラウンドトリップ保存`() {
-        checkAll(
-            PropTestConfig(iterations = 100),
-            validUnlockCodeArb,
-        ) { code ->
+        repeat(100) {
+            val code = randomCode(Random.nextInt(4, 21))
             settingsStore.clearUnlockCodeHash()
             settingsStore.saveUnlockCodeHash(code)
 
@@ -57,13 +40,12 @@ class SettingsStorePrivacyModePropertyTest {
 
     @Test
     fun `Property 2 解除コードの非衝突性`() {
-        checkAll(
-            PropTestConfig(iterations = 100),
-            validUnlockCodeArb,
-            validUnlockCodeArb,
-        ) { firstCode, secondCode ->
-            if (firstCode == secondCode) return@checkAll
-
+        repeat(100) {
+            val firstCode = randomCode(Random.nextInt(4, 21))
+            var secondCode = randomCode(Random.nextInt(4, 21))
+            while (secondCode == firstCode) {
+                secondCode = randomCode(Random.nextInt(4, 21))
+            }
             settingsStore.clearUnlockCodeHash()
             settingsStore.saveUnlockCodeHash(firstCode)
 
@@ -73,11 +55,18 @@ class SettingsStorePrivacyModePropertyTest {
 
     @Test
     fun `Property 6 解除コードの長さバリデーション`() {
-        checkAll(
-            PropTestConfig(iterations = 100),
-            invalidLengthUnlockCodeArb,
-        ) { code ->
+        repeat(100) {
+            val length = if (it % 2 == 0) Random.nextInt(0, 4) else Random.nextInt(21, 31)
+            val code = randomCode(length)
             settingsStore.isValidUnlockCode(code).shouldBeFalse()
+        }
+    }
+
+    private fun randomCode(length: Int): String {
+        return buildString(length) {
+            repeat(length) {
+                append(allowedChars.random())
+            }
         }
     }
 }

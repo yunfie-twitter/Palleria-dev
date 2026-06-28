@@ -234,6 +234,14 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         updateSettings { it.copy(themeMode = value) }
     }
 
+    fun updateUseDynamicColor(value: Boolean) {
+        updateSettings { it.copy(useDynamicColor = value) }
+    }
+
+    fun updateSeedColor(value: Long) {
+        updateSettings { it.copy(seedColor = value) }
+    }
+
     fun updateAllowR18(value: Boolean) {
         updateSettings { it.copy(allowR18 = value) }
     }
@@ -328,6 +336,10 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateOfflineStorageLimitBytes(value: Long) {
         updateSettings { it.copy(offlineStorageLimitBytes = value.coerceAtLeast(50L * 1024 * 1024)) }
+    }
+
+    fun updateUserProfileBottomSheetEnabled(value: Boolean) {
+        updateSettings { it.copy(userProfileBottomSheetEnabled = value) }
     }
 
     fun updateShowAiBadge(value: Boolean) {
@@ -1324,6 +1336,10 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             _uiState.update { it.copy(message = str(R.string.error_load_artist_failed)) }
             return
         }
+        if (!_uiState.value.settings.userProfileBottomSheetEnabled) {
+            openUserPage(userId)
+            return
+        }
         if (_uiState.value.selectedUser?.id != userId) {
             _uiState.update {
                 it.copy(
@@ -1445,7 +1461,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun collapseUserPageToSheet() {
-        if (_uiState.value.userPageFromSheet) {
+        if (_uiState.value.settings.userProfileBottomSheetEnabled && _uiState.value.userPageFromSheet) {
             _uiState.update { it.copy(showUserPage = false) }
         } else {
             closeUserPage()

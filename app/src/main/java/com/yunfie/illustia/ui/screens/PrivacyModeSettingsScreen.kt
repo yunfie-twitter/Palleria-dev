@@ -32,6 +32,7 @@ import com.yunfie.illustia.ui.components.Section
 import com.yunfie.illustia.ui.components.SettingDropdownRow
 import com.yunfie.illustia.ui.components.SettingLinkRow
 import com.yunfie.illustia.ui.components.SettingSwitchRow
+import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -308,6 +309,7 @@ fun PrivacyModeSettingsScreen(
                             changeCodeError = null
                         },
                         modifier = Modifier.weight(1f),
+                        colors = overlayActionButtonColors(),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     ) {
                         Text("キャンセル")
@@ -328,6 +330,7 @@ fun PrivacyModeSettingsScreen(
                             }
                         },
                         modifier = Modifier.weight(1f),
+                        colors = overlayActionButtonColors(),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     ) {
                         Text("変更する", fontWeight = FontWeight.Bold)
@@ -389,6 +392,7 @@ fun PrivacyModeSettingsScreen(
                             dummyNameError = null
                         },
                         modifier = Modifier.weight(1f),
+                        colors = overlayActionButtonColors(),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     ) {
                         Text("キャンセル")
@@ -406,6 +410,7 @@ fun PrivacyModeSettingsScreen(
                             }
                         },
                         modifier = Modifier.weight(1f),
+                        colors = overlayActionButtonColors(),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     ) {
                         Text("保存", fontWeight = FontWeight.Bold)

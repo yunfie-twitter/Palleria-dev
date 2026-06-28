@@ -163,6 +163,7 @@ fun MiuixConfirmDialog(
             Button(
                 onClick = onDismiss,
                 modifier = Modifier.weight(1f),
+                colors = overlayActionButtonColors(),
                 insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
             ) {
                 Text(stringResource(R.string.action_cancel))
@@ -170,6 +171,7 @@ fun MiuixConfirmDialog(
             Button(
                 onClick = onConfirm,
                 modifier = Modifier.weight(1f),
+                colors = overlayActionButtonColors(),
                 insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
             ) {
                 Text(confirmText, color = if (destructive) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
@@ -282,6 +284,10 @@ fun <T> FlowButtons(values: List<T>, label: (T) -> String, onClick: (T) -> Unit)
                     Button(
                         onClick = { onClick(value) },
                         modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            color = MiuixTheme.colorScheme.surfaceContainer,
+                            contentColor = MiuixTheme.colorScheme.onSurface,
+                        ),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
                     ) {
                         Text(label(value), maxLines = 1, overflow = TextOverflow.Ellipsis)

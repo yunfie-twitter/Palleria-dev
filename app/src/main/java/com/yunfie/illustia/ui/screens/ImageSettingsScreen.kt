@@ -28,6 +28,7 @@ import com.yunfie.illustia.ui.components.PredictiveBackGestureHandler
 import com.yunfie.illustia.ui.components.Section
 import com.yunfie.illustia.ui.components.SettingDropdownRow
 import com.yunfie.illustia.ui.components.SettingSwitchRow
+import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -244,6 +245,7 @@ fun ImageSettingsScreen(
                                     Button(
                                         onClick = { showCustomDialog = false },
                                         modifier = Modifier.weight(1f),
+                                        colors = overlayActionButtonColors(),
                                     ) {
                                         Text(stringResource(R.string.action_cancel))
                                     }
@@ -253,6 +255,7 @@ fun ImageSettingsScreen(
                                             showCustomDialog = false
                                         },
                                         modifier = Modifier.weight(1f),
+                                        colors = overlayActionButtonColors(),
                                     ) {
                                         Text(stringResource(R.string.action_add), fontWeight = FontWeight.Bold)
                                     }

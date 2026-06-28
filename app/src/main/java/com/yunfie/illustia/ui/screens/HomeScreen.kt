@@ -103,17 +103,37 @@ fun HomeScreen(
                 }
             },
             bottomContent = {
-                TabRow(
-                    tabs = HomeTab.entries.map { stringResource(it.labelResId) },
-                    selectedTabIndex = HomeTab.entries.indexOf(selectedTab),
-                    onTabSelected = { index ->
-                        selectedTab = HomeTab.entries[index]
-                        coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
-                )
+                if (settings.amoledMode) {
+                    TabRow(
+                        tabs = HomeTab.entries.map { stringResource(it.labelResId) },
+                        selectedTabIndex = HomeTab.entries.indexOf(selectedTab),
+                        onTabSelected = { index ->
+                            selectedTab = HomeTab.entries[index]
+                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                        },
+                        colors = TabRowDefaults.tabRowColors(
+                            backgroundColor = scheme.surfaceContainer.copy(alpha = 0.88f),
+                            contentColor = scheme.onSurfaceVariantSummary,
+                            selectedBackgroundColor = scheme.surfaceContainerHigh,
+                            selectedContentColor = scheme.onBackground,
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
+                    )
+                } else {
+                    TabRow(
+                        tabs = HomeTab.entries.map { stringResource(it.labelResId) },
+                        selectedTabIndex = HomeTab.entries.indexOf(selectedTab),
+                        onTabSelected = { index ->
+                            selectedTab = HomeTab.entries[index]
+                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
+                    )
+                }
             },
         )
         Surface(

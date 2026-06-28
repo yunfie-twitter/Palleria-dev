@@ -34,6 +34,7 @@ import com.yunfie.illustia.ui.components.LocalBottomSheetBackgroundColor
 import com.yunfie.illustia.ui.components.NonAmoledDarkTheme
 import com.yunfie.illustia.ui.components.PredictiveBackGestureHandler
 import com.yunfie.illustia.ui.components.StateBanner
+import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -81,6 +82,7 @@ fun RefreshTokenLoginBottomSheet(
                     onClick = viewModel::login,
                     enabled = state.settings.refreshToken.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
+                    colors = overlayActionButtonColors(),
                 ) {
                     Text(stringResource(R.string.login_token_button))
                 }
@@ -205,6 +207,7 @@ fun PixivWebLoginScreen(
                                 webView?.reload() ?: webView?.loadUrl(request.authorizationUrl)
                             },
                             modifier = Modifier.fillMaxWidth(),
+                            colors = overlayActionButtonColors(),
                         ) {
                             Text(stringResource(R.string.dialog_reload))
                         }

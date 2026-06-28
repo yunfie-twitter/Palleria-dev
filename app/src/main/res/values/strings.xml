@@ -28,6 +28,7 @@
     <string name="action_view_all">すべて見る</string>
     <string name="action_show">表示する</string>
     <string name="action_add">追加</string>
+    <string name="action_enable">有効にする</string>
     <string name="active">アクティブ</string>
 
     <!-- Home screen -->
@@ -180,6 +181,16 @@
     <string name="general_section_startup">起動</string>
     <string name="general_theme">テーマ</string>
     <string name="general_theme_desc">アプリ全体の明るさを切り替えます</string>
+    <string name="general_amoled">AMOLED</string>
+    <string name="general_amoled_desc">ダークテーマ時に背景とsurfaceを黒にします</string>
+    <string name="general_experimental_feature">実験的機能</string>
+    <string name="general_amoled_warning_desc">AMOLED は実験的機能です。ダークテーマ時の背景と surface が黒に変わり、見た目が大きく変わる場合があります。続けますか？</string>
+    <string name="general_dynamic_color">Dynamic Color</string>
+    <string name="general_dynamic_color_desc">端末のシステム配色をアプリに反映します</string>
+    <string name="general_seed_color">Seed Color</string>
+    <string name="general_seed_color_dialog_title">Seed Color</string>
+    <string name="general_seed_color_dialog_desc">Dynamic Color をオフにしたときの基準色を選択します</string>
+    <string name="general_seed_color_presets">プリセット</string>
     <string name="general_language">アプリの言語</string>
     <string name="general_language_desc">Palleria の表示言語と Pixiv API の言語を切り替えます</string>
     <string name="general_r18">R-18コンテンツを表示</string>
@@ -196,6 +207,8 @@
     <string name="general_double_back_desc">ホーム画面で戻るを2回押すとアプリを終了します</string>
     <string name="general_secure">セキュアウィンドウ</string>
     <string name="general_secure_desc">スクリーンショットと画面録画を制限します</string>
+    <string name="general_user_profile_bottom_sheet">プロフィール画面をBottomSheetで表示</string>
+    <string name="general_user_profile_bottom_sheet_desc">オフにするとプロフィールは全画面で開きます</string>
     <string name="general_startup_screen">最初に開く画面</string>
     <string name="general_startup_screen_desc">アプリ起動時のタブを選びます</string>
 

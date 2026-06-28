@@ -1,6 +1,5 @@
 package com.yunfie.illustia.ui.screens
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -82,7 +81,7 @@ fun UserProfileScreen(
     onUnmuteUser: () -> Unit,
     showHeaderControls: Boolean = true,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = if (isSystemInDarkTheme()) Color.Black else MiuixTheme.colorScheme.background,
+    backgroundColor: Color = MiuixTheme.colorScheme.background,
     contentHeight: Dp? = null,
 ) {
     PredictiveBackGestureHandler(onBack = onBack)
@@ -191,7 +190,7 @@ private fun UserProfileHeader(
             }
             .fillMaxWidth()
             .height(180.dp)
-            .background(if (isSystemInDarkTheme()) Color.Black else MiuixTheme.colorScheme.surfaceContainerHigh),
+            .background(MiuixTheme.colorScheme.surfaceContainerHigh),
     ) {
         if (user.backgroundImageUrl != null) {
             PixivImage(
@@ -225,7 +224,7 @@ private fun UserProfileHeader(
                             ),
                         ),
                     ),
-                    backgroundColor = Color.Black.copy(alpha = 0.35f),
+                    backgroundColor = MiuixTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.88f),
                     cornerRadius = 19.dp,
                     minWidth = 38.dp,
                     minHeight = 38.dp,
@@ -296,7 +295,7 @@ private fun UserProfileInfo(
             onTabSelected = onTabSelected,
             colors = TabRowDefaults.tabRowColors(
                 backgroundColor = Color.Transparent,
-                selectedBackgroundColor = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.15f) else MiuixTheme.colorScheme.surfaceContainerHigh,
+                selectedBackgroundColor = MiuixTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 selectedContentColor = MiuixTheme.colorScheme.onBackground,
             ),

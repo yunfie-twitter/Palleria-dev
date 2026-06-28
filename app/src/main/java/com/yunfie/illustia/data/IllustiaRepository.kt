@@ -50,32 +50,33 @@ class IllustiaRepository(
     }
 
     suspend fun loadRanking(mode: String): PageResult<Illust> {
-        return apiClient.ranking(requireSession(), mode)
+        return withSessionRetry { session -> apiClient.ranking(session, mode) }
     }
 
     suspend fun followingIllusts(restrict: Restrict): PageResult<Illust> {
-        return apiClient.following(requireSession(), restrict)
+        return withSessionRetry { session -> apiClient.following(session, restrict) }
     }
 
     suspend fun loadHome(kind: HomeFeedKind): PageResult<Illust> {
-        val active = requireSession()
-        return when (kind) {
-            HomeFeedKind.Recommended -> apiClient.recommended(active)
-            HomeFeedKind.Ranking -> apiClient.ranking(active) // Default to day
-            HomeFeedKind.New -> apiClient.newest(active)
+        return withSessionRetry { session ->
+            when (kind) {
+                HomeFeedKind.Recommended -> apiClient.recommended(session)
+                HomeFeedKind.Ranking -> apiClient.ranking(session) // Default to day
+                HomeFeedKind.New -> apiClient.newest(session)
+            }
         }
     }
 
     suspend fun loadNovels(): PageResult<NovelPreview> {
-        return apiClient.recommendedNovels(requireSession())
+        return withSessionRetry { session -> apiClient.recommendedNovels(session) }
     }
 
     suspend fun nextNovelPage(nextUrl: String): PageResult<NovelPreview> {
-        return apiClient.nextNovelPage(requireSession(), nextUrl)
+        return withSessionRetry { session -> apiClient.nextNovelPage(session, nextUrl) }
     }
 
     suspend fun loadNovelText(novelId: Long): NovelTextContent {
-        return apiClient.novelText(requireSession(), novelId)
+        return withSessionRetry { session -> apiClient.novelText(session, novelId) }
     }
 
     suspend fun search(
@@ -86,67 +87,74 @@ class IllustiaRepository(
         bookmarkFilter: SearchBookmarkFilter,
         includeR18: Boolean,
     ): PageResult<Illust> {
-        return apiClient.search(requireSession(), word, sort, target, duration, bookmarkFilter, includeR18)
+        return withSessionRetry { session ->
+            apiClient.search(session, word, sort, target, duration, bookmarkFilter, includeR18)
+        }
     }
 
     suspend fun searchUsers(word: String): PageResult<UserPreview> {
-        return apiClient.searchUsers(requireSession(), word)
+        return withSessionRetry { session -> apiClient.searchUsers(session, word) }
     }
 
     suspend fun trendingTags(): List<String> {
-        return apiClient.trendingTags(requireSession())
+        return withSessionRetry { session -> apiClient.trendingTags(session) }
     }
 
     suspend fun followingUsers(restrict: Restrict): PageResult<UserPreview> {
-        val userId = requireSession().userId
-            ?: throw IllegalStateException("Pixiv user ID is not available.")
-        return apiClient.followingUsers(requireSession(), userId, restrict)
+        return withSessionRetry { session ->
+            val userId = session.userId
+                ?: throw IllegalStateException("Pixiv user ID is not available.")
+            apiClient.followingUsers(session, userId, restrict)
+        }
     }
 
     suspend fun userDetail(userId: Long): UserProfile {
-        return apiClient.userDetail(requireSession(), userId)
+        return withSessionRetry { session -> apiClient.userDetail(session, userId) }
     }
 
     suspend fun userIllusts(userId: Long): PageResult<Illust> {
-        return apiClient.userIllusts(requireSession(), userId)
+        return withSessionRetry { session -> apiClient.userIllusts(session, userId) }
     }
 
     suspend fun illustDetail(illustId: Long): Illust {
-        return apiClient.illustDetail(requireSession(), illustId)
+        return withSessionRetry { session -> apiClient.illustDetail(session, illustId) }
     }
 
     suspend fun relatedIllusts(illustId: Long): PageResult<Illust> {
-        return apiClient.relatedIllusts(requireSession(), illustId)
+        return withSessionRetry { session -> apiClient.relatedIllusts(session, illustId) }
     }
 
     suspend fun followUser(userId: Long, restrict: Restrict) {
-        apiClient.followUser(requireSession(), userId, restrict)
+        withSessionRetry { session ->
+            apiClient.followUser(session, userId, restrict)
+        }
     }
 
     suspend fun unfollowUser(userId: Long) {
-        apiClient.unfollowUser(requireSession(), userId)
+        withSessionRetry { session -> apiClient.unfollowUser(session, userId) }
     }
 
     suspend fun bookmarks(userId: Long, restrict: Restrict): PageResult<Illust> {
-        return apiClient.bookmarks(requireSession(), userId, restrict)
+        return withSessionRetry { session -> apiClient.bookmarks(session, userId, restrict) }
     }
 
     suspend fun nextPage(nextUrl: String): PageResult<Illust> {
-        return apiClient.nextIllustPage(requireSession(), nextUrl)
+        return withSessionRetry { session -> apiClient.nextIllustPage(session, nextUrl) }
     }
 
     suspend fun nextUserSearchPage(nextUrl: String): PageResult<UserPreview> {
-        return apiClient.nextUserPreviewPage(requireSession(), nextUrl)
+        return withSessionRetry { session -> apiClient.nextUserPreviewPage(session, nextUrl) }
     }
 
     suspend fun toggleBookmark(illust: Illust, restrict: Restrict): Illust {
-        val active = requireSession()
-        return if (illust.isBookmarked) {
-            apiClient.removeBookmark(active, illust.id)
-            illust.copy(isBookmarked = false)
-        } else {
-            apiClient.addBookmark(active, illust.id, restrict)
-            illust.copy(isBookmarked = true)
+        return withSessionRetry { session ->
+            if (illust.isBookmarked) {
+                apiClient.removeBookmark(session, illust.id)
+                illust.copy(isBookmarked = false)
+            } else {
+                apiClient.addBookmark(session, illust.id, restrict)
+                illust.copy(isBookmarked = true)
+            }
         }
     }
 
@@ -155,5 +163,75 @@ class IllustiaRepository(
         val refreshToken = readSettings().refreshToken
         require(refreshToken.isNotBlank()) { "Pixiv refresh token が未設定です。" }
         return login(refreshToken)
+    }
+
+    private suspend inline fun <T> withSessionRetry(
+        crossinline block: suspend (PixivSession) -> T,
+    ): T {
+        var activeSession = requireSession()
+        var attempt = 0
+        while (attempt < 2) {
+            try {
+                return block(activeSession)
+            } catch (error: Throwable) {
+                when {
+                    error.isPixivAuthExpired() -> {
+                        if (attempt == 0) {
+                            activeSession = refreshSession()
+                            attempt++
+                            continue
+                        }
+                        throw error
+                    }
+                    error.isTransientConnectionIssue() -> {
+                        if (attempt == 0) {
+                            attempt++
+                            continue
+                        }
+                        throw error
+                    }
+                    else -> throw error
+                }
+            }
+        }
+        throw IllegalStateException("Pixiv request failed unexpectedly.")
+    }
+
+    private suspend fun refreshSession(): PixivSession {
+        val settings = readSettings()
+        val refreshToken = settings.refreshToken
+        require(refreshToken.isNotBlank()) { "Pixiv refresh token が未設定です。" }
+        return login(refreshToken)
+    }
+
+    private fun Throwable.isPixivAuthExpired(): Boolean {
+        var current: Throwable? = this
+        while (current != null) {
+            if (current is PixivApiException && current.isAuthExpired()) return true
+            current = current.cause
+        }
+        return false
+    }
+
+    private fun PixivApiException.isAuthExpired(): Boolean {
+        if (statusCode == 401) return true
+        if (statusCode != 400) return false
+        val message = apiMessage.lowercase()
+        return message.contains("oauth") ||
+            message.contains("token") ||
+            message.contains("invalid_grant") ||
+            message.contains("invalid refresh")
+    }
+
+    private fun Throwable.isTransientConnectionIssue(): Boolean {
+        var current: Throwable? = this
+        while (current != null) {
+            val message = current.message.orEmpty()
+            if (message.contains("Connection closed before full header was received")) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
     }
 }
