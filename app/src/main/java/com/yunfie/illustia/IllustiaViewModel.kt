@@ -1542,8 +1542,16 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun saveImage(url: String, filename: String) {
+        val queueId = System.nanoTime()
+        val queuedIllust = resolveDownloadIllust(filename)
+        val queueTitle = queuedIllust?.title?.takeIf { it.isNotBlank() } ?: filename
+        val queueSubtitle = queuedIllust?.artistName?.takeIf { it.isNotBlank() }
+            ?: str(R.string.download_queue_waiting)
         viewModelScope.launch(Dispatchers.IO) {
+            enqueueDownloadQueue(queueId, queueTitle, queueSubtitle, DownloadQueueStatus.Waiting)
+            var terminalStatus: DownloadQueueStatus? = null
             acquireDownloadSlot()
+            updateDownloadQueueStatus(queueId, DownloadQueueStatus.Downloading)
             _uiState.update { it.copy(loadState = LoadState.Loading, message = str(R.string.msg_image_saving, it.activeDownloads, it.settings.simultaneousDownloads.coerceIn(1, 4))) }
             try {
                 val currentIllust = resolveDownloadIllust(filename)
@@ -1560,14 +1568,17 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     val updated = repository.toggleBookmark(currentIllust, restrict)
                     updateIllustEverywhere(updated)
                 }
+                terminalStatus = DownloadQueueStatus.Completed
                 _uiState.update { it.copy(loadState = LoadState.Loaded, message = str(R.string.msg_image_saved)) }
             } catch (error: Throwable) {
                 if (isCancellation(error)) {
                     throw error
                 }
+                terminalStatus = DownloadQueueStatus.Failed
                 if (handleAuthExpired(error)) return@launch
                 _uiState.update { it.copy(loadState = LoadState.Error(cleanErrorMessage(error, str(R.string.error_save_failed)))) }
             } finally {
+                terminalStatus?.let { updateDownloadQueueStatus(queueId, it) }
                 releaseDownloadSlot()
             }
         }
@@ -1587,6 +1598,10 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openOfflineLibrary() {
         _navigationRequests.tryEmit(IllustiaNavigationRequest.OfflineLibrary)
+    }
+
+    fun openDownloadQueue() {
+        _navigationRequests.tryEmit(IllustiaNavigationRequest.DownloadQueue)
     }
 
     fun loadSavedLibrary() {
@@ -1723,6 +1738,42 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun releaseDownloadSlot() {
         downloadMutex.withLock {
             _uiState.update { it.copy(activeDownloads = (it.activeDownloads - 1).coerceAtLeast(0)) }
+        }
+    }
+
+    private fun enqueueDownloadQueue(
+        id: Long,
+        title: String,
+        subtitle: String,
+        status: DownloadQueueStatus,
+    ) {
+        _uiState.update { state ->
+            state.copy(
+                downloadQueue = (
+                    listOf(
+                        DownloadQueueEntry(
+                            id = id,
+                            title = title,
+                            subtitle = subtitle,
+                            status = status,
+                        )
+                    ) + state.downloadQueue
+                ).take(32),
+            )
+        }
+    }
+
+    private fun updateDownloadQueueStatus(id: Long, status: DownloadQueueStatus) {
+        _uiState.update { state ->
+            state.copy(
+                downloadQueue = state.downloadQueue.map { entry ->
+                    if (entry.id == id) {
+                        entry.copy(status = status, timestampMillis = System.currentTimeMillis())
+                    } else {
+                        entry
+                    }
+                }.take(32),
+            )
         }
     }
 

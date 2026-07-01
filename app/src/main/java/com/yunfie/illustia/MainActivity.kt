@@ -24,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.LocalTextStyle
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.yunfie.illustia.nativebridge.NativeIntentRouter
 import com.yunfie.illustia.settings.SettingsStore
 import com.yunfie.illustia.settings.AppFont
+import com.yunfie.illustia.settings.isAppDarkTheme
 import com.yunfie.illustia.settings.rememberAppThemeColors
 import com.yunfie.illustia.settings.appLanguageLocaleList
 import com.yunfie.illustia.ui.IllustiaApp
@@ -124,6 +126,7 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val systemDark = isSystemInDarkTheme()
             val themeColors = rememberAppThemeColors(state.settings)
 
             LaunchedEffect(state.settings.secureWindow) {
@@ -147,12 +150,8 @@ class MainActivity : FragmentActivity() {
                 applyAppLanguage(state.settings.appLanguage)
             }
 
-            LaunchedEffect(state.settings.themeMode) {
-                val isDarkTheme = when (state.settings.themeMode) {
-                    "light" -> false
-                    "dark" -> true
-                    else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-                }
+            LaunchedEffect(state.settings.themeMode, systemDark) {
+                val isDarkTheme = isAppDarkTheme(state.settings.themeMode, systemDark)
                 enableEdgeToEdge(
                     statusBarStyle = if (isDarkTheme) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
                     navigationBarStyle = if (isDarkTheme) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),

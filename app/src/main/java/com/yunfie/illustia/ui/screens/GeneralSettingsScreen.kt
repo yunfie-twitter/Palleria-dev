@@ -10,8 +10,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.yunfie.illustia.IllustiaUiState
@@ -32,10 +30,7 @@ import com.yunfie.illustia.ui.components.HeaderIcon
 import com.yunfie.illustia.ui.components.MiuixConfirmDialog
 import com.yunfie.illustia.ui.components.PredictiveBackGestureHandler
 import com.yunfie.illustia.ui.components.Section
-import com.yunfie.illustia.ui.components.ColorSettingRow
-import com.yunfie.illustia.ui.components.SeedColorPickerDialog
 import com.yunfie.illustia.ui.components.ThemeSwitchSettingRow
-import com.yunfie.illustia.ui.components.colorSummary
 import com.yunfie.illustia.ui.components.SettingDropdownRow
 import com.yunfie.illustia.ui.components.SettingLinkRow
 import com.yunfie.illustia.ui.components.SettingSwitchRow
@@ -54,22 +49,8 @@ fun GeneralSettingsScreen(
 ) {
     PredictiveBackGestureHandler(onBack = onBack)
     val scrollBehavior = MiuixScrollBehavior()
-    var showSeedColorDialog by remember { mutableStateOf(false) }
     var showAmoledWarningDialog by remember { mutableStateOf(false) }
-    val seedColor = remember(state.settings.seedColor) { Color(state.settings.seedColor.toInt()) }
     val dynamicColorAvailable = isDynamicColorAvailable()
-
-    if (showSeedColorDialog) {
-        SeedColorPickerDialog(
-            show = true,
-            initialColor = seedColor,
-            onDismiss = { showSeedColorDialog = false },
-            onConfirm = { color ->
-                viewModel.updateSeedColor(color.toArgb().toLong())
-                showSeedColorDialog = false
-            },
-        )
-    }
 
     if (showAmoledWarningDialog) {
         MiuixConfirmDialog(
@@ -147,15 +128,6 @@ fun GeneralSettingsScreen(
                         },
                         enabled = dynamicColorAvailable,
                     )
-                    if (!state.settings.useDynamicColor) {
-                        DividerLine()
-                        ColorSettingRow(
-                            title = stringResource(R.string.general_seed_color),
-                            summary = colorSummary(seedColor),
-                            color = seedColor,
-                            onClick = { showSeedColorDialog = true },
-                        )
-                    }
                     DividerLine()
                     SettingDropdownRow(
                         title = stringResource(R.string.general_language),

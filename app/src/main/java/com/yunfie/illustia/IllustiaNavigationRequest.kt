@@ -15,6 +15,7 @@ enum class IllustiaNavigationRequest {
     MuteSettings,
     AppData,
     OfflineLibrary,
+    DownloadQueue,
     About,
     FavoriteTags,
     AppLockSetup,

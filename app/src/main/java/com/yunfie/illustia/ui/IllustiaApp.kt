@@ -118,6 +118,7 @@ private sealed interface AppRoute : NavKey {
     data object MuteSettings : AppRoute
     data object AppData : AppRoute
     data object OfflineLibrary : AppRoute
+    data object DownloadQueue : AppRoute
     data object About : AppRoute
     data object FavoriteTags : AppRoute
     data object UserProfile : AppRoute
@@ -250,6 +251,7 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                     IllustiaNavigationRequest.MuteSettings -> AppRoute.MuteSettings
                     IllustiaNavigationRequest.AppData -> AppRoute.AppData
                     IllustiaNavigationRequest.OfflineLibrary -> AppRoute.OfflineLibrary
+                    IllustiaNavigationRequest.DownloadQueue -> AppRoute.DownloadQueue
                     IllustiaNavigationRequest.About -> AppRoute.About
                     IllustiaNavigationRequest.FavoriteTags -> AppRoute.FavoriteTags
                     IllustiaNavigationRequest.AppLockSetup -> AppRoute.AppLockSetup
@@ -525,6 +527,13 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                     onBack = ::popRoute,
                 )
             }
+            entry(AppRoute.DownloadQueue) {
+                DownloadQueueScreen(
+                    state = state,
+                    viewModel = viewModel,
+                    onBack = ::popRoute,
+                )
+            }
             entry(AppRoute.About) {
                 AboutScreen(onBack = ::popRoute)
             }
@@ -617,27 +626,6 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                 .fillMaxSize()
                 .background(MiuixTheme.colorScheme.surface),
         )
-
-        MiuixConfirmDialog(
-            show = state.showReloginRequiredDialog,
-            title = stringResource(R.string.dialog_relogin_title),
-            summary = stringResource(R.string.dialog_relogin_summary),
-            confirmText = stringResource(R.string.dialog_relogin_button),
-            onConfirm = viewModel::openWebLogin,
-            onDismiss = viewModel::dismissReloginRequiredDialog,
-        )
-
-        state.pendingBookmarkRemoval?.let { illust ->
-            MiuixConfirmDialog(
-                show = true,
-                title = stringResource(R.string.dialog_unbookmark_title),
-                summary = stringResource(R.string.dialog_unbookmark_confirm, illust.title.ifBlank { stringResource(R.string.detail_muted_artist_blur_default) }),
-                confirmText = stringResource(R.string.action_remove_bookmark),
-                destructive = true,
-                onConfirm = viewModel::confirmBookmarkRemoval,
-                onDismiss = viewModel::cancelBookmarkRemoval,
-            )
-        }
 
         state.longPressedIllust?.let { illust ->
             OverlayBottomSheet(
@@ -780,6 +768,27 @@ fun IllustiaApp(viewModel: IllustiaViewModel) {
                 state = state,
                 viewModel = viewModel,
                 onDismiss = { showTokenLogin = false },
+            )
+        }
+
+        MiuixConfirmDialog(
+            show = state.showReloginRequiredDialog,
+            title = stringResource(R.string.dialog_relogin_title),
+            summary = stringResource(R.string.dialog_relogin_summary),
+            confirmText = stringResource(R.string.dialog_relogin_button),
+            onConfirm = viewModel::openWebLogin,
+            onDismiss = viewModel::dismissReloginRequiredDialog,
+        )
+
+        state.pendingBookmarkRemoval?.let { illust ->
+            MiuixConfirmDialog(
+                show = true,
+                title = stringResource(R.string.dialog_unbookmark_title),
+                summary = stringResource(R.string.dialog_unbookmark_confirm, illust.title.ifBlank { stringResource(R.string.detail_muted_artist_blur_default) }),
+                confirmText = stringResource(R.string.action_remove_bookmark),
+                destructive = true,
+                onConfirm = viewModel::confirmBookmarkRemoval,
+                onDismiss = viewModel::cancelBookmarkRemoval,
             )
         }
                 }

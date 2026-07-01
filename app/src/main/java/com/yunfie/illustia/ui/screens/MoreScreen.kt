@@ -158,10 +158,10 @@ private fun rememberQuickActions(
                 onClick = viewModel::openOfflineLibrary,
             ),
             MoreAction(
-                title = context.getString(R.string.more_app_data),
-                summary = context.getString(R.string.more_app_data_summary),
-                icon = MiuixIcons.Photos,
-                onClick = viewModel::openAppData,
+                title = context.getString(R.string.more_download_list),
+                summary = context.getString(R.string.more_download_list_summary),
+                icon = MiuixIcons.Download,
+                onClick = viewModel::openDownloadQueue,
             ),
         )
     }

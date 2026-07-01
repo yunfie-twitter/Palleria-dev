@@ -67,6 +67,7 @@ data class IllustiaUiState(
     val showReloginRequiredDialog: Boolean = false,
     val pendingBookmarkRemoval: Illust? = null,
     val activeDownloads: Int = 0,
+    val downloadQueue: List<DownloadQueueEntry> = emptyList(),
     val showAccountSwitcher: Boolean = false,
     val appLocked: Boolean = false,
     val showLockRecoveryDialog: Boolean = false,
@@ -90,6 +91,23 @@ internal data class MuteFilter(
 ) {
     val isEmpty: Boolean
         get() = illustIds.isEmpty() && userIds.isEmpty() && tags.isEmpty()
+}
+
+@Immutable
+data class DownloadQueueEntry(
+    val id: Long,
+    val title: String,
+    val subtitle: String,
+    val status: DownloadQueueStatus,
+    val timestampMillis: Long = System.currentTimeMillis(),
+)
+
+@Immutable
+enum class DownloadQueueStatus {
+    Waiting,
+    Downloading,
+    Completed,
+    Failed,
 }
 
 internal fun AppSettings.toMuteFilter(): MuteFilter {

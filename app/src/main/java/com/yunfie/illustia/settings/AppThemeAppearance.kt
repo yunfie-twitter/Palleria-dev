@@ -12,16 +12,12 @@ import top.yukonga.miuix.kmp.theme.ThemeController
 
 @Composable
 fun rememberAppThemeColors(settings: AppSettings): Colors {
-    val effectiveDark = when (settings.themeMode) {
-        "light" -> false
-        "dark" -> true
-        else -> isSystemInDarkTheme()
-    }
+    val systemDark = isSystemInDarkTheme()
+    val effectiveDark = isAppDarkTheme(settings.themeMode, systemDark)
     val useDynamicColor = settings.useDynamicColor && isDynamicColorAvailable()
-    val controller = remember(settings.themeMode, useDynamicColor, settings.seedColor) {
+    val controller = remember(settings.themeMode, useDynamicColor, systemDark) {
         ThemeController(
-            colorSchemeMode = settings.toColorSchemeMode(),
-            keyColor = if (useDynamicColor) null else Color(settings.seedColor.toInt()),
+            colorSchemeMode = settings.toColorSchemeMode(useDynamicColor),
         )
     }
     val colors = controller.currentColors()
@@ -32,15 +28,23 @@ fun rememberAppThemeColors(settings: AppSettings): Colors {
     }
 }
 
+fun isAppDarkTheme(themeMode: String, systemDark: Boolean): Boolean {
+    return when (themeMode) {
+        "light" -> false
+        "dark" -> true
+        else -> systemDark
+    }
+}
+
 fun isDynamicColorAvailable(): Boolean {
     return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 }
 
-private fun AppSettings.toColorSchemeMode(): ColorSchemeMode {
+private fun AppSettings.toColorSchemeMode(useDynamicColor: Boolean): ColorSchemeMode {
     return when (themeMode) {
-        "light" -> ColorSchemeMode.MonetLight
-        "dark" -> ColorSchemeMode.MonetDark
-        else -> ColorSchemeMode.MonetSystem
+        "light" -> if (useDynamicColor) ColorSchemeMode.MonetLight else ColorSchemeMode.Light
+        "dark" -> if (useDynamicColor) ColorSchemeMode.MonetDark else ColorSchemeMode.Dark
+        else -> if (useDynamicColor) ColorSchemeMode.MonetSystem else ColorSchemeMode.System
     }
 }
 
