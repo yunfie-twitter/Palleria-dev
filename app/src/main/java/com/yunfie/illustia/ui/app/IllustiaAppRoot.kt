@@ -116,7 +116,10 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
             AppRoute.NovelList -> Unit
             AppRoute.NovelReader -> viewModel.closeNovel()
             AppRoute.IllustSeries -> selectedWatchlistSeriesId = null
-            AppRoute.UserProfile -> viewModel.hideUserPage()
+            AppRoute.UserProfile -> {
+                viewModel.hideUserPage()
+                viewModel.restoreProfileReturnDetail()
+            }
             else -> Unit
         }
     }

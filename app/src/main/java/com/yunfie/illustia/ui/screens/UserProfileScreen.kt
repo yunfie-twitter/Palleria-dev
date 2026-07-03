@@ -5,9 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -80,6 +80,7 @@ fun UserProfileScreen(
     onMuteUser: () -> Unit,
     isMuted: Boolean,
     onUnmuteUser: () -> Unit,
+    gridState: LazyGridState,
     showHeaderControls: Boolean = true,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MiuixTheme.colorScheme.background,
@@ -110,7 +111,7 @@ fun UserProfileScreen(
     }
 
     LazyVerticalGrid(
-        state = rememberLazyGridState(),
+        state = gridState,
         columns = GridCells.Fixed(adaptiveIllustColumns(settings)),
         modifier = modifier
             .then(if (contentHeight != null) Modifier.height(contentHeight) else Modifier.fillMaxSize())

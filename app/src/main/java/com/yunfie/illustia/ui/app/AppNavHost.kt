@@ -287,6 +287,7 @@ internal fun AppNavHost(
                     onMuteUser = { viewModel.muteUser(user.id) },
                     isMuted = appState.state.settings.mutedUsers.contains(user.id),
                     onUnmuteUser = { viewModel.unmuteUser(user.id) },
+                    gridState = viewModel.userProfileGridState(user.id),
                     showHeaderControls = true,
                 )
             } else {

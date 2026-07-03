@@ -197,13 +197,14 @@ internal fun AppOverlayHost(
                         onLoadBookmarks = viewModel::loadSelectedUserBookmarks,
                         onLoadMoreBookmarks = viewModel::loadMoreSelectedUserBookmarks,
                         onToggleFollow = { viewModel.toggleFollow(user) },
-                        onMuteUser = { viewModel.muteUser(user.id) },
-                        isMuted = appState.state.settings.mutedUsers.contains(user.id),
-                        onUnmuteUser = { viewModel.unmuteUser(user.id) },
-                        showHeaderControls = false,
-                        backgroundColor = userSheetBackground,
-                        contentHeight = userSheetHeight,
-                    )
+                    onMuteUser = { viewModel.muteUser(user.id) },
+                    isMuted = appState.state.settings.mutedUsers.contains(user.id),
+                    onUnmuteUser = { viewModel.unmuteUser(user.id) },
+                    gridState = viewModel.userProfileGridState(user.id),
+                    showHeaderControls = false,
+                    backgroundColor = userSheetBackground,
+                    contentHeight = userSheetHeight,
+                )
                 }
             }
         }

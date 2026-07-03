@@ -72,6 +72,13 @@ import java.io.FileOutputStream
 
 @Keep
 class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
+    private data class DetailSnapshot(
+        val illust: Illust,
+        val user: UserProfile?,
+        val firstComment: Comment?,
+        val relatedIllusts: List<Illust>,
+    )
+
     private val repository by lazy {
         IllustiaRepository(
             SettingsStore(getApplication<Application>().applicationContext),
@@ -92,6 +99,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     private var recommendedTagsJob: Job? = null
     private var recommendedTagsExpiryJob: Job? = null
     private var savedLibraryJob: Job? = null
+    private var profileReturnDetail: DetailSnapshot? = null
 
     private companion object {
         val RECOMMENDED_TAG_CACHE_TTL_MILLIS = TimeUnit.MINUTES.toMillis(30)
@@ -105,6 +113,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     val searchResultGridState = LazyGridState()
     val searchBrowseGridState = LazyGridState()
     val rankingGridState = LazyGridState()
+    private val userProfileGridStates = mutableMapOf<Long, LazyGridState>()
     private val downloadClient: OkHttpClient by lazy {
         (getApplication<Application>() as IllustiaApplication).sharedHttpClient.newBuilder()
             .readTimeout(30, TimeUnit.SECONDS)
@@ -363,6 +372,10 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateShowAiBadge(value: Boolean) {
         updateSettings { it.copy(showAiBadge = value) }
+    }
+
+    fun userProfileGridState(userId: Long): LazyGridState {
+        return userProfileGridStates.getOrPut(userId) { LazyGridState() }
     }
 
     fun updateSaveViewHistory(value: Boolean) {
@@ -1276,6 +1289,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openIllust(illust: Illust) {
+        captureProfileReturnDetail()
         if (_uiState.value.settings.saveViewHistory) {
             val history = (listOf(illust) + _uiState.value.settings.viewHistory)
                 .distinctBy { it.id }
@@ -1431,6 +1445,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             _uiState.update { it.copy(message = str(R.string.error_load_artist_failed)) }
             return
         }
+        captureProfileReturnDetail()
         _uiState.update {
             it.copy(
                 selectedUser = null,
@@ -1506,9 +1521,25 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun expandUserSheetToPage() {
+        captureProfileReturnDetail()
         closeUserPageJob?.cancel()
         closeUserPageJob = null
         _uiState.update { it.copy(showUserPage = true, userPageFromSheet = true) }
+    }
+
+    fun restoreProfileReturnDetail(): Boolean {
+        val snapshot = profileReturnDetail ?: return false
+        profileReturnDetail = null
+        detailExtrasJob?.cancel()
+        _uiState.update {
+            it.copy(
+                selectedIllust = snapshot.illust,
+                selectedIllustUser = snapshot.user,
+                selectedIllustFirstComment = snapshot.firstComment,
+                relatedIllusts = snapshot.relatedIllusts,
+            )
+        }
+        return true
     }
 
     fun toggleFollow(user: UserProfile) {
@@ -2499,6 +2530,23 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    private fun captureProfileReturnDetail() {
+        val current = _uiState.value.selectedIllust
+        if (current == null) {
+            if (!_uiState.value.showUserPage) {
+                profileReturnDetail = null
+            }
+            return
+        }
+        if (_uiState.value.showUserPage && profileReturnDetail?.illust?.id == current.id) return
+        profileReturnDetail = DetailSnapshot(
+            illust = current,
+            user = _uiState.value.selectedIllustUser,
+            firstComment = _uiState.value.selectedIllustFirstComment,
+            relatedIllusts = _uiState.value.relatedIllusts,
+        )
     }
 
     private fun List<UserPreview>.appendUserPreviews(next: List<UserPreview>): List<UserPreview> {
