@@ -1,14 +1,23 @@
 Categories:
   - Multimedia
   - Graphics
+  - Internet
 License: GPL-3.0-only
 AuthorName: ゆんふぃ
+AuthorEmail: yunfie168@proton.me
+AuthorWebSite: https://yunfi.f5.si/
 WebSite: https://github.com/yunfie-twitter/Illustia-dev
 SourceCode: https://github.com/yunfie-twitter/Illustia-dev
 IssueTracker: https://github.com/yunfie-twitter/Illustia-dev/issues
+Changelog: https://github.com/yunfie-twitter/Illustia-dev/releases
+
+RepoType: git
+Repo: https://github.com/yunfie-twitter/Illustia-dev
 
 AntiFeatures:
   - NonFreeNet
+    en-US: Depends on Pixiv, which is proprietary.
+    ja-JP: このアプリは、公開されていないPixiv APIに依存しています。
 
 Summary: Pixivのイラスト・漫画・作品を快適に閲覧できる、シンプルで使いやすい非公式クライアントです。
 Description: |-
@@ -21,4 +30,3 @@ Description: |-
   - ブックマーク管理
   - 画像保存機能
 
-  Pixiv Anti-Feature: Non-Free Network Services

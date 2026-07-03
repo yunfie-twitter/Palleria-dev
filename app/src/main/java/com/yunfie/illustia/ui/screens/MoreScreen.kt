@@ -44,7 +44,6 @@ import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
 import top.yukonga.miuix.kmp.icon.extended.Filter
 import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Photos
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Timer
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -57,7 +56,7 @@ private val IconTileShape = RoundedCornerShape(12.dp)
 fun MoreScreen(
     state: IllustiaUiState,
     viewModel: IllustiaViewModel,
-    onOpenWatchlistSeries: () -> Unit,
+    onOpenWatchlistSeries: (Long) -> Unit,
 ) {
     val quickActions = rememberQuickActions(state, viewModel, onOpenWatchlistSeries)
     val utilityActions = rememberUtilityActions(viewModel)
@@ -110,7 +109,7 @@ fun MoreScreen(
 private fun rememberQuickActions(
     state: IllustiaUiState,
     viewModel: IllustiaViewModel,
-    onOpenWatchlistSeries: () -> Unit,
+    onOpenWatchlistSeries: (Long) -> Unit,
 ): List<MoreAction> {
     val context = LocalContext.current
     return remember(
@@ -152,12 +151,7 @@ private fun rememberQuickActions(
                 icon = MiuixIcons.Download,
                 onClick = viewModel::openDownloadQueue,
             ),
-            MoreAction(
-                title = context.getString(R.string.more_watchlist_series),
-                icon = MiuixIcons.Photos,
-                onClick = onOpenWatchlistSeries,
-            ),
-        )
+            )
     }
 }
 

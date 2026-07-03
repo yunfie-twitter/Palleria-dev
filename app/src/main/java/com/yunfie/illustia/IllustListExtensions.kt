@@ -62,3 +62,20 @@ internal fun List<Illust>.visibleWithSettings(settings: AppSettings): List<Illus
     return visibleWith(settings.toMuteFilter())
 }
 
+internal fun List<Illust>.visibleWithMutedTagsVisible(settings: AppSettings): List<Illust> {
+    val filter = settings.toMuteFilter()
+    if (filter.illustIds.isEmpty() && filter.userIds.isEmpty()) {
+        return this
+    }
+    return filterNot { illust ->
+        illust.id in filter.illustIds ||
+                illust.artistId in filter.userIds
+    }
+}
+
+internal fun Illust.isMutedByTags(settings: AppSettings): Boolean {
+    if (settings.mutedTags.isEmpty()) return false
+    val mutedTags = settings.mutedTags.toHashSet()
+    return tags.any { it in mutedTags }
+}
+

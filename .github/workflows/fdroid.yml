@@ -8,6 +8,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pages: write
@@ -55,6 +59,27 @@ jobs:
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION_NAME" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION_NAME ($VERSION_CODE)"
+
+      - name: Cancel if duplicate tag already exists
+        if: github.ref == 'refs/heads/main'
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag }}"
+          if git ls-remote --tags origin "refs/tags/$TAG_NAME" | grep -q "refs/tags/$TAG_NAME"; then
+            echo "Tag $TAG_NAME already exists on origin. Stopping this run."
+            exit 78
+          fi
+
+      - name: Cancel if release already exists
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release $TAG_NAME already exists. Stopping this run."
+            exit 78
+          fi
 
       - name: Create and Push Tag
         if: github.ref == 'refs/heads/main'
@@ -162,4 +187,4 @@ jobs:
             app/build/outputs/apk/debug/*.apk
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

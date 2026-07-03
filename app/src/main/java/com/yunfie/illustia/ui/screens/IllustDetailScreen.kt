@@ -80,6 +80,7 @@ fun IllustDetailScreen(
     onSearchTag: (String) -> Unit,
     isArtistFollowed: Boolean,
     isArtistMuted: Boolean,
+    isTagMuted: Boolean,
     onToggleFollow: () -> Unit,
     onUnmuteUser: () -> Unit,
     onMuteIllust: () -> Unit,
@@ -102,7 +103,8 @@ fun IllustDetailScreen(
     PredictiveBackGestureHandler(onBack = onBack)
     var pendingSave by remember { mutableStateOf<Pair<String, String>?>(null) }
     var showUnfollowConfirm by remember { mutableStateOf(false) }
-    var revealMutedArtwork by remember(illust.id, isArtistMuted) { mutableStateOf(!isArtistMuted) }
+    val isArtworkMuted = isArtistMuted || isTagMuted
+    var revealMutedArtwork by remember(illust.id, isArtistMuted, isTagMuted) { mutableStateOf(!isArtworkMuted) }
     val pixivUrl = remember(illust.id) { "https://www.pixiv.net/artworks/${illust.id}" }
     
     // 詳細画面を開く際の重さを軽減するために重いコンテンツを遅延レンダリングする
@@ -197,8 +199,21 @@ fun IllustDetailScreen(
                     onMuteUser = onMuteUser,
                     onMessage = onMessage,
                     showImage = showHeavyContent,
-                    maskMutedArtwork = isArtistMuted && !revealMutedArtwork,
+                    maskMutedArtwork = isArtworkMuted && !revealMutedArtwork,
                     onRevealMutedArtwork = { revealMutedArtwork = true },
+                    mutedArtworkTitle = if (isArtistMuted) {
+                        stringResource(R.string.detail_muted_artist)
+                    } else {
+                        stringResource(R.string.detail_muted_work)
+                    },
+                    mutedArtworkSummary = if (isArtistMuted) {
+                        stringResource(
+                            R.string.detail_muted_artist_blur,
+                            illust.artistName.ifBlank { stringResource(R.string.detail_muted_artist_blur_default) },
+                        )
+                    } else {
+                        stringResource(R.string.detail_muted_work_blur)
+                    },
                 )
             }
             item {

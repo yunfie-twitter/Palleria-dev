@@ -897,7 +897,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             val page = repository.loadRanking(_uiState.value.rankingMode)
             val settings = _uiState.value.settings
             val items = withContext(Dispatchers.Default) {
-                page.items.visibleWithSettings(settings)
+                page.items.visibleWithMutedTagsVisible(settings)
             }
             _uiState.update {
                 it.copy(
@@ -915,7 +915,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             val settings = _uiState.value.settings
             _uiState.update {
                 it.copy(
-                    rankingItems = it.rankingItems.appendIllusts(page.items.visibleWithSettings(settings)),
+                    rankingItems = it.rankingItems.appendIllusts(page.items.visibleWithMutedTagsVisible(settings)),
                     rankingNextUrl = page.nextUrl,
                 )
             }
@@ -994,7 +994,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
                 _uiState.update {
                     it.copy(
-                        searchItems = page.items.visibleWithSettings(it.settings),
+                        searchItems = page.items.visibleWithMutedTagsVisible(it.settings),
                         searchNextUrl = page.nextUrl,
                         userSearchItems = users?.items.orEmpty(),
                         userSearchNextUrl = users?.nextUrl,
@@ -2062,7 +2062,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             val page = repository.nextPage(nextUrl)
             _uiState.update {
                 it.copy(
-                    searchItems = it.searchItems.appendIllusts(page.items.visibleWithSettings(it.settings)),
+                    searchItems = it.searchItems.appendIllusts(page.items.visibleWithMutedTagsVisible(it.settings)),
                     searchNextUrl = page.nextUrl,
                 )
             }
@@ -2521,10 +2521,10 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             _uiState.update {
                 it.copy(
                     homeItems = it.homeItems.visibleWith(it),
-                    searchItems = it.searchItems.visibleWith(it),
+                    searchItems = it.searchItems.visibleWithMutedTagsVisible(it.settings),
                     timelineItems = it.timelineItems.visibleWith(it),
                     watchlistItems = it.watchlistItems.visibleWith(it),
-                    rankingItems = it.rankingItems.visibleWith(it),
+                    rankingItems = it.rankingItems.visibleWithMutedTagsVisible(it.settings),
                     bookmarkItems = it.bookmarkItems.visibleWith(it),
                     relatedIllusts = it.relatedIllusts.visibleWith(it),
                     selectedUserIllusts = it.selectedUserIllusts.visibleWith(it),

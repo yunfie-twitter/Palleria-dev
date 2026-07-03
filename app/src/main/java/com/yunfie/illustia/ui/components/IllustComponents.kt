@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
@@ -127,6 +128,7 @@ fun IllustCard(
     highQualityImages: Boolean = true,
     showAiBadge: Boolean = true,
     showBookmarkButton: Boolean = true,
+    isMutedByTag: Boolean = false,
 ) {
     val preferLowDataImages = LocalPreferLowDataImages.current
     val previewUrl = remember(illust.id, highQualityImages, preferLowDataImages) {
@@ -152,6 +154,7 @@ fun IllustCard(
         showBookmarkButton = showBookmarkButton,
         modifier = modifier,
         isSelected = isSelected,
+        isMutedByTag = isMutedByTag,
     )
 }
 
@@ -169,6 +172,7 @@ private fun IllustCardImpl(
     showBookmarkButton: Boolean,
     modifier: Modifier = Modifier,
     isSelected: Boolean,
+    isMutedByTag: Boolean,
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -180,14 +184,14 @@ private fun IllustCardImpl(
     }
     Card(
         modifier = cardModifier.combinedClickable(
-            onClick = onClick,
-            onLongClick = if (onLongClick != null) {
-                {
-                    performAppHapticFeedback(context, haptic, hapticMode)
-                    onLongClick()
-                }
-            } else null
-        ),
+                onClick = onClick,
+                onLongClick = if (onLongClick != null) {
+                    {
+                        performAppHapticFeedback(context, haptic, hapticMode)
+                        onLongClick()
+                    }
+                } else null
+            ),
         cornerRadius = 14.dp,
         insideMargin = PaddingValues(0.dp),
         colors = CardDefaults.defaultColors(color = Color.Transparent, contentColor = MiuixTheme.colorScheme.onBackground),
@@ -200,6 +204,7 @@ private fun IllustCardImpl(
                     previewUrl = previewUrl,
                     title = title,
                     badgeText = cardBadgeText,
+                    isMutedByTag = isMutedByTag,
                 )
 
                 IllustCardInfo(
@@ -243,6 +248,7 @@ private fun IllustCardThumbnail(
     previewUrl: String,
     title: String,
     badgeText: String?,
+    isMutedByTag: Boolean,
 ) {
     Box(
         modifier = Modifier
@@ -250,13 +256,15 @@ private fun IllustCardThumbnail(
             .aspectRatio(0.75f)
             .squircleSurface(MiuixTheme.colorScheme.surfaceContainer, 14.dp),
     ) {
-        PixivImage(
-            url = previewUrl,
-            contentDescription = title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            thumbnail = true,
-        )
+        Box(modifier = Modifier.fillMaxSize().then(if (isMutedByTag) Modifier.blur(12.dp) else Modifier)) {
+            PixivImage(
+                url = previewUrl,
+                contentDescription = title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                thumbnail = true,
+            )
+        }
         if (badgeText != null) {
             Text(
                 text = badgeText,
@@ -455,6 +463,7 @@ fun IllustGrid(
     hasMore: Boolean = false,
     onLoadMore: (() -> Unit)? = null,
     showBookmarkButton: Boolean = true,
+    isMutedByTag: (Illust) -> Boolean = { false },
     contentPadding: PaddingValues = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = MainNavigationContentPadding),
 ) {
     if (illusts.isEmpty()) {
@@ -474,6 +483,7 @@ fun IllustGrid(
                     onBookmark = { onBookmark(illust) },
                     onClick = { onOpenIllust(illust) },
                     showBookmarkButton = showBookmarkButton,
+                    isMutedByTag = isMutedByTag(illust),
                 )
             }
             if (hasMore && onLoadMore != null) {

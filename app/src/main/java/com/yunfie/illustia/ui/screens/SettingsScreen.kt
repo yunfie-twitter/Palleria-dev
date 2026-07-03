@@ -18,7 +18,6 @@ import com.yunfie.illustia.IllustiaUiState
 import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.R
 import com.yunfie.illustia.ui.components.ElevatedPanel
-import com.yunfie.illustia.ui.components.HeroPanel
 import com.yunfie.illustia.ui.components.HeaderIcon
 import com.yunfie.illustia.ui.components.PredictiveBackGestureHandler
 import com.yunfie.illustia.ui.components.SettingLinkRow
@@ -98,13 +97,6 @@ fun SettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            item {
-                HeroPanel(
-                    title = stringResource(R.string.app_name),
-                    body = stringResource(R.string.more_settings_summary),
-                )
-            }
-
             item {
                 ElevatedPanel(contentPadding = PaddingValues(0.dp)) {
                     categories.forEachIndexed { index, cat ->

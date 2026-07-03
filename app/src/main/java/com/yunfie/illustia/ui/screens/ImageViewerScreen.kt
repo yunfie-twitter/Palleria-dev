@@ -69,7 +69,8 @@ fun ImageViewerScreen(
     illust: Illust,
     startPage: Int,
     onBack: () -> Unit,
-    onSaveImage: (String, String) -> Unit,
+    isBookmarked: Boolean,
+    onBookmark: () -> Unit,
     onMessage: (String) -> Unit,
     fullscreenQuality: String,
     prefetchImages: Boolean,
@@ -198,18 +199,11 @@ fun ImageViewerScreen(
                                 style = MiuixTheme.textStyles.title4,
                                 modifier = Modifier.padding(start = 12.dp).weight(1f),
                             )
-                            IconButton(
-                                onClick = {
-                                    onSaveImage(
-                                        imageUrls[pagerState.currentPage],
-                                        "illustia_${illust.id}_p${pagerState.currentPage}",
-                                    )
-                                },
-                            ) {
+                            IconButton(onClick = onBookmark) {
                                 Icon(
-                                    imageVector = MiuixIcons.Download,
-                                    contentDescription = stringResource(R.string.action_download),
-                                    tint = MiuixTheme.colorScheme.onSurface,
+                                    imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                                    contentDescription = stringResource(R.string.action_bookmark),
+                                    tint = if (isBookmarked) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
                                 )
                             }
                             IconButton(onClick = { shareCurrentPage() }) {

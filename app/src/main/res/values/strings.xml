@@ -132,6 +132,8 @@
     <string name="detail_muted_artist">ミュート中の作者です</string>
     <string name="detail_muted_artist_blur">%1$s さんの作品をぼかしています。</string>
     <string name="detail_muted_artist_blur_default">この作者</string>
+    <string name="detail_muted_work">ミュート中の作品です</string>
+    <string name="detail_muted_work_blur">ミュート中のタグを含む作品をぼかしています。</string>
     <string name="detail_unmute">ミュート解除</string>
     <string name="detail_no_caption">キャプションはありません</string>
     <string name="detail_comments">コメント</string>
@@ -146,7 +148,6 @@
 
     <!-- More screen -->
     <string name="more_settings">設定</string>
-    <string name="more_settings_summary">表示と保存の調整</string>
     <string name="more_view_history">閲覧履歴</string>
     <string name="more_favorite_tags">お気に入りタグ</string>
     <string name="more_mute_settings">ミュート設定</string>

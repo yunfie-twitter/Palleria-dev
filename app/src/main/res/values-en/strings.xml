@@ -132,6 +132,8 @@
     <string name="detail_muted_artist">Muted Artist</string>
     <string name="detail_muted_artist_blur">Works by %1$s are blurred.</string>
     <string name="detail_muted_artist_blur_default">this artist</string>
+    <string name="detail_muted_work">Muted Work</string>
+    <string name="detail_muted_work_blur">Works containing muted tags are blurred.</string>
     <string name="detail_unmute">Unmute</string>
     <string name="detail_no_caption">No caption</string>
     <string name="detail_comments">Comments</string>
@@ -146,7 +148,6 @@
 
     <!-- More screen -->
     <string name="more_settings">Settings</string>
-    <string name="more_settings_summary">Display &amp; Save Options</string>
     <string name="more_view_history">View History</string>
     <string name="more_favorite_tags">Favorite Tags</string>
     <string name="more_mute_settings">Mute Settings</string>

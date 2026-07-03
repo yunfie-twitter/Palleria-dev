@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.yunfie.illustia.IllustiaUiState
 import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.R
+import com.yunfie.illustia.isMutedByTags
 import com.yunfie.illustia.models.LoadState
 import com.yunfie.illustia.settings.AppSettings
 import com.yunfie.illustia.ui.components.*
@@ -268,6 +269,7 @@ private fun RankingGridContent(
                         onLongClick = onLongClick,
                         highQualityImages = feedHighQuality,
                         showAiBadge = showAiBadge,
+                        isMutedByTag = illust.isMutedByTags(settings),
                     )
                 }
 

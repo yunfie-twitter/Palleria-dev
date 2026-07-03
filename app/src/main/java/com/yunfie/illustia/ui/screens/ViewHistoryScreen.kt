@@ -27,6 +27,7 @@ import com.yunfie.illustia.ui.components.MainNavigationContentPadding
 import com.yunfie.illustia.ui.components.MiuixConfirmDialog
 import com.yunfie.illustia.ui.components.PredictiveBackGestureHandler
 import com.yunfie.illustia.ui.components.adaptiveIllustColumns
+import com.yunfie.illustia.visibleWithSettings
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -54,8 +55,12 @@ fun ViewHistoryScreen(
     val hasSelection = selectedIds.isNotEmpty()
     val selectedCountText = stringResource(R.string.data_items_count, selectedIds.size)
 
-    LaunchedEffect(state.settings.viewHistory) {
-        val availableIds = state.settings.viewHistory.asSequence().map { it.id }.toSet()
+    val visibleHistory = remember(state.settings.viewHistory, state.settings) {
+        state.settings.viewHistory.visibleWithSettings(state.settings)
+    }
+
+    LaunchedEffect(visibleHistory) {
+        val availableIds = visibleHistory.asSequence().map { it.id }.toSet()
         selectedIds = selectedIds.filterTo(mutableSetOf()) { it in availableIds }
     }
 
@@ -126,13 +131,13 @@ fun ViewHistoryScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
 
-        if (state.settings.viewHistory.isEmpty()) {
+        if (visibleHistory.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 EmptyState(stringResource(R.string.search_empty_illust))
             }
         }
 
-        gridItems(state.settings.viewHistory, key = { it.id }, contentType = { "illust_card" }) { illust ->
+        gridItems(visibleHistory, key = { it.id }, contentType = { "illust_card" }) { illust ->
             val isSelected = illust.id in selectedIds
             IllustCard(
                 illust = illust,
