@@ -115,14 +115,7 @@ private fun rememberQuickActions(
     return remember(
         state.activeDownloads,
         state.settings.favoriteTags.size,
-        state.settings.mutedIllusts.size,
-        state.settings.mutedUsers.size,
-        state.settings.mutedTags.size,
     ) {
-        val mutedTotal = state.settings.mutedIllusts.size +
-                state.settings.mutedUsers.size +
-                state.settings.mutedTags.size
-
         listOf(
             MoreAction(
                 title = context.getString(R.string.more_settings),
@@ -143,7 +136,6 @@ private fun rememberQuickActions(
             MoreAction(
                 title = context.getString(R.string.more_mute_settings),
                 icon = MiuixIcons.Filter,
-                badge = mutedTotal.badgeText(),
                 onClick = viewModel::openMuteSettings,
             ),
             MoreAction(
@@ -151,7 +143,7 @@ private fun rememberQuickActions(
                 icon = MiuixIcons.Download,
                 onClick = viewModel::openDownloadQueue,
             ),
-            )
+        )
     }
 }
 

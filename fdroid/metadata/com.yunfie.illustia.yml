@@ -15,7 +15,7 @@ RepoType: git
 Repo: https://github.com/yunfie-twitter/Illustia-dev
 
 AntiFeatures:
-  - NonFreeNet
+  NonFreeNet:
     en-US: Depends on Pixiv, which is proprietary.
     ja-JP: このアプリは、公開されていないPixiv APIに依存しています。
 
@@ -29,4 +29,3 @@ Description: |-
   - 強力な検索機能（タグ・ユーザー）
   - ブックマーク管理
   - 画像保存機能
-
