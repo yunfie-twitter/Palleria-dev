@@ -36,7 +36,7 @@ import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.squircle.squircleSurface
 
-private const val GITHUB_URL = "https://github.com/"
+private const val FDROID_URL = "https://yunfi.f5.si/Illustia-dev/repo"
 
 @Composable
 fun AboutScreen(
@@ -145,9 +145,9 @@ fun AboutScreen(
         item {
             Section(stringResource(R.string.about_section_links)) {
                 ElevatedPanel(contentPadding = PaddingValues(0.dp)) {
-                    SettingLinkRow(stringResource(R.string.about_github)) {
+                    SettingLinkRow(stringResource(R.string.about_fdroid)) {
                         runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_URL)))
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(FDROID_URL)))
                         }
                     }
                     DividerLine()

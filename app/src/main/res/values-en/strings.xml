@@ -409,7 +409,7 @@
     <string name="about_supported_os">Supported OS</string>
     <string name="about_license">License</string>
     <string name="about_open_source">Open Source</string>
-    <string name="about_github">GitHub Repository</string>
+    <string name="about_fdroid">F-Droid Repository</string>
     <string name="about_pixiv">Pixiv Official Site</string>
     <string name="about_disclaimer">This app is not affiliated with Pixiv.</string>
 
