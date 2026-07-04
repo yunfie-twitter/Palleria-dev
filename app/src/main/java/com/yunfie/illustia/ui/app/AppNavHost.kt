@@ -154,7 +154,6 @@ internal fun AppNavHost(
                     onMessage = viewModel::showMessage,
                     fullscreenQuality = appState.state.settings.fullscreenQuality,
                     prefetchImages = appState.state.settings.prefetchImages,
-                    thumbnailsInToolbar = appState.state.settings.viewerThumbnailsInToolbar,
                 )
             }
         }

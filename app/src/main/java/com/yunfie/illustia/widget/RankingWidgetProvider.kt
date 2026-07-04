@@ -15,7 +15,6 @@ import com.yunfie.illustia.MainActivity
 import com.yunfie.illustia.R
 import com.yunfie.illustia.models.Illust
 import com.yunfie.illustia.data.IllustiaRepository
-import com.yunfie.illustia.data.PixivApiClient
 import com.yunfie.illustia.data.proxyPixivImageUrl
 import com.yunfie.illustia.settings.SettingsStore
 import kotlinx.coroutines.CoroutineScope
@@ -71,10 +70,7 @@ private class RankingWidgetUpdater(
     private val appWidgetManager: AppWidgetManager,
 ) {
     private val applicationContext = context.applicationContext
-    private val repository = IllustiaRepository(
-        SettingsStore(applicationContext),
-        PixivApiClient((applicationContext as IllustiaApplication).sharedHttpClient),
-    )
+    private val repository = IllustiaRepository(SettingsStore(applicationContext))
 
     suspend fun update(appWidgetIds: IntArray) {
         val settings = repository.readSettings()

@@ -137,6 +137,7 @@
     <string name="detail_unmute">ミュート解除</string>
     <string name="detail_no_caption">キャプションはありません</string>
     <string name="detail_comments">コメント</string>
+    <string name="detail_show_comments">コメントを表示</string>
     <string name="detail_comments_empty">まだコメントはありません</string>
     <string name="detail_series">シリーズ</string>
     <string name="detail_related">関連イラスト</string>
@@ -184,7 +185,7 @@
     <string name="settings_general">一般設定</string>
     <string name="settings_general_summary">表示・操作・起動</string>
     <string name="settings_image">画像設定</string>
-    <string name="settings_image_summary">画質・レイアウト・プロキシ</string>
+    <string name="settings_image_summary">画質・レイアウト・接続・プロキシ</string>
     <string name="settings_bookmark">ブックマーク設定</string>
     <string name="settings_bookmark_summary">保存・確認</string>
     <string name="settings_account">アカウント</string>
@@ -291,9 +292,9 @@
     <string name="detail_save_offline">保存済み一覧に追加しました。</string>
     <string name="image_section_quality">画質</string>
     <string name="image_section_layout">レイアウト</string>
-    <string name="image_viewer_thumbnails_in_toolbar">ツールバー内にサムネイルを表示</string>
-    <string name="image_viewer_thumbnails_in_toolbar_desc">オフにすると拡大画面のツールバー上部へ分けて表示します</string>
     <string name="image_section_proxy">プロキシ</string>
+    <string name="image_pixiv_network_mode">Pixiv 接続方式</string>
+    <string name="image_pixiv_network_mode_desc">ECH / compat / standard を切り替えます</string>
     <string name="image_high_quality">高品質な画像を使用</string>
     <string name="image_high_quality_desc">モバイルデータ通信量が増加する可能性があります</string>
     <string name="image_prefetch">画像の先読み</string>
@@ -309,6 +310,9 @@
     <string name="image_quality_high">高画質</string>
     <string name="image_quality_medium">標準</string>
     <string name="image_quality_low">軽量</string>
+    <string name="pixiv_network_mode_standard">standard</string>
+    <string name="pixiv_network_mode_ech">ech</string>
+    <string name="pixiv_network_mode_compat">compat</string>
     <string name="image_proxy_none">使用しない</string>
     <string name="image_proxy_custom">カスタムサーバー</string>
     <string name="image_proxy_custom_dialog_title">カスタムサーバーの入力</string>
@@ -458,7 +462,6 @@
     <string name="illust_load_more">続きを読み込む</string>
 
     <!-- Toast / Snackbar messages -->
-    <string name="msg_pixiv_connected">Pixiv に接続しました。</string>
     <string name="msg_web_login_complete">Pixiv Webログインが完了しました。</string>
     <string name="msg_logged_out">ログアウトしました。</string>
     <string name="msg_shared_image_received">共有画像を受け取りました。画像からの検索はまだ未対応です。</string>
@@ -466,8 +469,6 @@
     <string name="msg_mute_data_deleted">ミュートデータを削除しました。</string>
     <string name="msg_watchlist_tag_added">#%1$s をWatchlistに追加しました。</string>
     <string name="msg_watchlist_tag_removed">#%1$s をWatchlistから外しました。</string>
-    <string name="msg_image_saving">画像を保存中… (%1$d/%2$d)</string>
-    <string name="msg_image_saved">画像を保存しました。</string>
     <string name="msg_no_saveable_images">保存できる画像がありません。</string>
     <string name="msg_save_started">%1$dページの保存を開始しました。</string>
     <string name="msg_cache_deleted">キャッシュを削除しました。</string>

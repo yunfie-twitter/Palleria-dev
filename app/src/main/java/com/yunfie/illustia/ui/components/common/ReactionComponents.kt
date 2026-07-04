@@ -56,6 +56,7 @@ fun FollowPill(
 ) {
     var animationStage by remember { mutableStateOf<FollowPillStage?>(null) }
     var lastHandledTrigger by remember { mutableStateOf(followAnimationTrigger) }
+    var awaitingFollowConfirmation by remember { mutableStateOf(false) }
 
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -64,10 +65,19 @@ fun FollowPill(
     LaunchedEffect(followAnimationTrigger) {
         if (followAnimationTrigger == lastHandledTrigger) return@LaunchedEffect
         lastHandledTrigger = followAnimationTrigger
+        awaitingFollowConfirmation = true
         animationStage = FollowPillStage.CHECK
         performAppHapticFeedback(context, haptic, hapticMode)
         delay(600)
         animationStage = FollowPillStage.FOLLOWED
+        awaitingFollowConfirmation = false
+    }
+
+    LaunchedEffect(isFollowed) {
+        if (!isFollowed) {
+            animationStage = null
+            awaitingFollowConfirmation = false
+        }
     }
 
     val stage = animationStage ?: if (isFollowed) {

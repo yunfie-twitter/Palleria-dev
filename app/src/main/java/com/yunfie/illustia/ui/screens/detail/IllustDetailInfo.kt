@@ -21,12 +21,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yunfie.illustia.R
 import com.yunfie.illustia.models.Illust
-import com.yunfie.illustia.models.pixiv.Comment
 import com.yunfie.illustia.nativebridge.NativeIntentEvent
 import com.yunfie.illustia.nativebridge.NativeIntentRouter
 import com.yunfie.illustia.ui.components.AvatarImage
@@ -49,7 +47,6 @@ internal fun IllustDetailInfo(
     illust: Illust,
     isArtistFollowed: Boolean,
     isArtistMuted: Boolean,
-    firstComment: Comment?,
     onOpenUser: () -> Unit,
     onOpenUserById: (Long) -> Unit,
     onOpenIllustById: (Long) -> Unit,
@@ -151,8 +148,7 @@ internal fun IllustDetailInfo(
             )
         }
 
-        CommentPreviewCard(
-            comment = firstComment,
+        CommentEntryButton(
             onClick = onOpenComments,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
@@ -211,24 +207,15 @@ internal fun IllustDetailInfo(
 }
 
 @Composable
-private fun CommentPreviewCard(
-    comment: Comment?,
+private fun CommentEntryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val user = comment?.user
-    val avatarUrl = user?.profileImageUrls?.medium.orEmpty()
-    val userName = user?.name.orEmpty()
-    val commentText = remember(comment?.comment) {
-        comment?.comment?.replace(Regex("\\s+"), " ")?.trim().orEmpty()
-    }.lineSequence().firstOrNull().orEmpty().take(80)
-    val fallbackLabel = stringResource(R.string.detail_comments)
-    val emptySummary = stringResource(R.string.detail_comments_empty)
-    ElevatedPanel(
-        modifier = modifier
-            .fillMaxWidth()
-            .miuixClickable(onClick = onClick),
-        contentPadding = PaddingValues(14.dp),
+    val commentsLabel = stringResource(R.string.detail_show_comments)
+    Button(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(color = MiuixTheme.colorScheme.surfaceContainerHigh),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -239,46 +226,24 @@ private fun CommentPreviewCard(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                    .background(MiuixTheme.colorScheme.surfaceContainerHigh),
+                    .background(MiuixTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center,
             ) {
-                if (avatarUrl.isNotBlank()) {
-                    AvatarImage(url = avatarUrl, name = userName.ifBlank { fallbackLabel }, size = 42.dp)
-                } else {
-                    Icon(
-                        imageVector = MiuixIcons.Messages,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onBackground,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
+                Icon(
+                    imageVector = MiuixIcons.Messages,
+                    contentDescription = null,
+                    tint = MiuixTheme.colorScheme.onBackground,
+                    modifier = Modifier.size(20.dp),
+                )
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = userName.ifBlank { fallbackLabel },
+                    text = commentsLabel,
                     color = MiuixTheme.colorScheme.onBackground,
                     style = MiuixTheme.textStyles.body1,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
-                if (commentText.isNotBlank()) {
-                    Text(
-                        text = commentText,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        style = MiuixTheme.textStyles.footnote1,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                } else if (comment == null) {
-                    Text(
-                        text = emptySummary,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        style = MiuixTheme.textStyles.footnote1,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
             Icon(
                 imageVector = MiuixIcons.ChevronForward,

@@ -1,21 +1,26 @@
 package com.yunfie.illustia.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -23,146 +28,56 @@ import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.R
 import com.yunfie.illustia.models.Illust
 import com.yunfie.illustia.models.LoadState
+import com.yunfie.illustia.models.UserProfile
 import com.yunfie.illustia.settings.AppSettings
-import com.yunfie.illustia.ui.components.*
-import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.*
+import com.yunfie.illustia.ui.components.EmptyState
+import com.yunfie.illustia.ui.components.IllustCard
+import com.yunfie.illustia.ui.components.IllustCardSkeleton
+import com.yunfie.illustia.ui.components.PrefetchPixivImages
+import com.yunfie.illustia.ui.components.PixivImage
+import com.yunfie.illustia.ui.components.adaptiveIllustColumns
+import com.yunfie.illustia.ui.components.StateBanner
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.icon.extended.Photos
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-
-// ホーム画面のタブ定義
-private enum class HomeTab(@androidx.annotation.StringRes val labelResId: Int) {
-    Feed(R.string.home_tab_feed),
-    Following(R.string.home_tab_following),
-}
 
 @Composable
-fun HomeScreen(
-    items: List<Illust>,
-    timelineItems: List<Illust>,
-    loadState: LoadState,
-    nextUrl: String?,
-    timelineNextUrl: String?,
-    settings: AppSettings,
-    viewModel: IllustiaViewModel,
-    onSearch: () -> Unit,
-    onOpenNovels: () -> Unit,
-) {
-    val pagerState = rememberPagerState(
-        initialPage = HomeTab.Feed.ordinal,
-        pageCount = { HomeTab.entries.size },
-    )
-    val coroutineScope = rememberCoroutineScope()
-    val selectedTab = HomeTab.entries[pagerState.currentPage]
-
-    // タブ切り替え時にデータを自動取得
-    LaunchedEffect(selectedTab) {
-        when (selectedTab) {
-            HomeTab.Feed -> {
-                // フィードはすでにロード済みの場合はスキップ
-            }
-            HomeTab.Following -> {
-                if (timelineItems.isEmpty()) {
-                    viewModel.refreshTimeline()
-                }
-            }
-        }
-    }
-
-    val scheme = MiuixTheme.colorScheme
-    val scrollBehavior = MiuixScrollBehavior()
-    Column(
+internal fun HomeAccountAvatar(account: UserProfile?) {
+    Box(
         modifier = Modifier
-            .fillMaxSize()
-            .background(scheme.surface),
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(MiuixTheme.colorScheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center,
     ) {
-        TopAppBar(
-            title = stringResource(R.string.nav_home),
-            largeTitle = stringResource(R.string.nav_home),
-            scrollBehavior = scrollBehavior,
-            actions = {
-                IconButton(onClick = onOpenNovels) {
-                    Icon(MiuixIcons.Photos, contentDescription = stringResource(R.string.nav_novel))
-                }
-                IconButton(
-                    onClick = {
-                        when (selectedTab) {
-                            HomeTab.Feed -> viewModel.refreshHome()
-                            HomeTab.Following -> viewModel.refreshTimeline()
-                        }
-                    },
-                ) {
-                    Icon(MiuixIcons.Refresh, contentDescription = stringResource(R.string.dialog_reload))
-                }
-            },
-            bottomContent = {
-                if (settings.amoledMode) {
-                    TabRow(
-                        tabs = HomeTab.entries.map { stringResource(it.labelResId) },
-                        selectedTabIndex = selectedTab.ordinal,
-                        onTabSelected = { index ->
-                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                        },
-                        colors = TabRowDefaults.tabRowColors(
-                            backgroundColor = scheme.surfaceContainer.copy(alpha = 0.88f),
-                            contentColor = scheme.onSurfaceVariantSummary,
-                            selectedBackgroundColor = scheme.surfaceContainerHigh,
-                            selectedContentColor = scheme.onBackground,
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
-                    )
-                } else {
-                    TabRow(
-                        tabs = HomeTab.entries.map { stringResource(it.labelResId) },
-                        selectedTabIndex = selectedTab.ordinal,
-                        onTabSelected = { index -> 
-                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
-                    )
-                }
-            },
-        )
-        Surface(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            color = scheme.surface,
-        ) {
-            HorizontalPager(
-                state = pagerState,
+        val avatarUrl = account?.profileImageUrl
+        if (!avatarUrl.isNullOrBlank()) {
+            PixivImage(
+                url = avatarUrl,
+                contentDescription = account.name,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
-            ) { page ->
-                when (HomeTab.entries[page]) {
-                    HomeTab.Feed -> FeedTabContent(
-                        items = items,
-                        loadState = loadState,
-                        nextUrl = nextUrl,
-                        settings = settings,
-                        viewModel = viewModel,
-                        scrollBehavior = scrollBehavior,
-                    )
-                    HomeTab.Following -> FollowingTabContent(
-                        items = timelineItems,
-                        loadState = loadState,
-                        nextUrl = timelineNextUrl,
-                        settings = settings,
-                        viewModel = viewModel,
-                        scrollBehavior = scrollBehavior,
-                    )
-                }
-            }
+                thumbnail = true,
+            )
+        } else {
+            Icon(
+                imageVector = MiuixIcons.Contacts,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onSurface,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
 
 @Composable
-private fun FeedTabContent(
+internal fun FeedTabContent(
     items: List<Illust>,
     loadState: LoadState,
     nextUrl: String?,
@@ -248,7 +163,7 @@ private fun FeedTabContent(
 }
 
 @Composable
-private fun FollowingTabContent(
+internal fun FollowingTabContent(
     items: List<Illust>,
     loadState: LoadState,
     nextUrl: String?,
@@ -332,4 +247,3 @@ private fun FollowingTabContent(
         }
     }
 }
-

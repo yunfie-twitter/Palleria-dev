@@ -2,52 +2,35 @@ package com.yunfie.illustia.ui.screens
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.calculateCentroidSize
-import androidx.compose.foundation.gestures.calculateCentroid
-import androidx.compose.foundation.gestures.calculatePan
-import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChanged
-import androidx.compose.ui.util.fastAll
-import androidx.compose.ui.util.fastAny
-import androidx.compose.ui.util.fastForEach
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import com.yunfie.illustia.R
@@ -61,7 +44,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -74,7 +56,6 @@ fun ImageViewerScreen(
     onMessage: (String) -> Unit,
     fullscreenQuality: String,
     prefetchImages: Boolean,
-    thumbnailsInToolbar: Boolean,
 ) {
     val context = LocalContext.current
     val shareFailedMessage = stringResource(R.string.viewer_share_failed)
@@ -94,14 +75,10 @@ fun ImageViewerScreen(
         }
     }
     val pagerState = rememberPagerState(initialPage = startPage.coerceIn(0, imageUrls.lastIndex.coerceAtLeast(0)), pageCount = { imageUrls.size })
-    val thumbnailUrls = remember(illust) {
-        illust.mediumImagePages.ifEmpty {
-            illust.imagePages.ifEmpty { imageUrls }
-        }
-    }
     val coroutineScope = rememberCoroutineScope()
     var isZoomed by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
+    val swipePageThresholdPx = with(LocalDensity.current) { 72.dp.toPx() }
 
     LaunchedEffect(showControls) {
         if (showControls) {
@@ -126,6 +103,14 @@ fun ImageViewerScreen(
             context.startActivity(shareIntent)
         }.onFailure {
             onMessage(shareFailedMessage)
+        }
+    }
+
+    fun movePage(direction: Int) {
+        val targetPage = (pagerState.currentPage + direction).coerceIn(0, imageUrls.lastIndex)
+        if (targetPage == pagerState.currentPage) return
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(targetPage)
         }
     }
 
@@ -155,50 +140,57 @@ fun ImageViewerScreen(
         floatingToolbar = {
             AnimatedVisibility(visible = showControls, enter = fadeIn(), exit = fadeOut()) {
                 FloatingToolbar(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MiuixTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+                    cornerRadius = 24.dp,
+                    outSidePadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                    shadowElevation = 12.dp,
+                    showDivider = false,
                 ) {
-                    Column(
-                        modifier = Modifier.padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (imageUrls.size > 1 && !thumbnailsInToolbar) {
-                            ViewerThumbnailStrip(
-                                imageUrls = imageUrls,
-                                thumbnailUrls = thumbnailUrls,
-                                currentPage = pagerState.currentPage,
-                                onPageSelected = { index ->
-                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                                },
-                                modifier = Modifier.padding(bottom = 6.dp),
-                            )
-                        }
-                        if (imageUrls.size > 1 && thumbnailsInToolbar) {
-                            ViewerThumbnailStrip(
-                                imageUrls = imageUrls,
-                                thumbnailUrls = thumbnailUrls,
-                                currentPage = pagerState.currentPage,
-                                onPageSelected = { index ->
-                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                                },
-                            )
-                        }
-                        Row(
+                        Box(
                             modifier = Modifier
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                                .weight(1f)
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(MiuixTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f))
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
                         ) {
-                            Icon(
-                                imageVector = MiuixIcons.Photos,
-                                contentDescription = null,
-                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                modifier = Modifier.padding(start = 8.dp).size(22.dp),
-                            )
-                            Text(
-                                text = "${pagerState.currentPage + 1} / ${imageUrls.size}",
-                                color = MiuixTheme.colorScheme.onSurface,
-                                style = MiuixTheme.textStyles.title4,
-                                modifier = Modifier.padding(start = 12.dp).weight(1f),
-                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.Photos,
+                                    contentDescription = null,
+                                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    text = "${pagerState.currentPage + 1} / ${imageUrls.size}",
+                                    color = MiuixTheme.colorScheme.onSurface,
+                                    style = MiuixTheme.textStyles.title4,
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (isBookmarked) {
+                                        MiuixTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MiuixTheme.colorScheme.surfaceContainerHighest
+                                    },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
                             IconButton(onClick = onBookmark) {
                                 Icon(
                                     imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
@@ -206,6 +198,14 @@ fun ImageViewerScreen(
                                     tint = if (isBookmarked) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
                                 )
                             }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MiuixTheme.colorScheme.surfaceContainerHighest),
+                            contentAlignment = Alignment.Center,
+                        ) {
                             IconButton(onClick = { shareCurrentPage() }) {
                                 Icon(
                                     imageVector = MiuixIcons.Share,
@@ -220,28 +220,33 @@ fun ImageViewerScreen(
         },
         floatingToolbarPosition = ToolbarPosition.BottomCenter,
     ) {
-        Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
-        Box(modifier = Modifier.fillMaxSize()) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            beyondViewportPageCount = if (prefetchImages) 1 else 0,
-            userScrollEnabled = !isZoomed,
-            key = { it },
-        ) { page ->
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                ZoomablePixivImage(
-                    url = imageUrls[page],
-                    contentDescription = illust.title,
-                    isActive = pagerState.currentPage == page,
-                    onZoomChanged = { zoomed ->
-                        if (pagerState.currentPage == page) isZoomed = zoomed
-                    },
-                    onTap = { showControls = !showControls }
-                )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                beyondViewportPageCount = if (prefetchImages) 1 else 0,
+                userScrollEnabled = !isZoomed,
+                key = { it },
+            ) { page ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    ZoomablePixivImage(
+                        url = imageUrls[page],
+                        contentDescription = illust.title,
+                        isActive = pagerState.currentPage == page,
+                        swipeThresholdPx = swipePageThresholdPx,
+                        onSwipePrevious = { movePage(-1) },
+                        onSwipeNext = { movePage(1) },
+                        onZoomChanged = { zoomed ->
+                            if (pagerState.currentPage == page) isZoomed = zoomed
+                        },
+                        onTap = { showControls = !showControls }
+                    )
+                }
             }
-        }
-        }
         }
     }
 }

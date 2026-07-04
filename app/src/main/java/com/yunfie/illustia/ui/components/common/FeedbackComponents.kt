@@ -85,11 +85,17 @@ fun HeaderIcon(
 }
 
 @Composable
-fun HeaderOverlayIcon(icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun HeaderOverlayIcon(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = Color.Black.copy(alpha = 0.35f),
+    contentColor: Color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+) {
     IconButton(
         onClick = onClick,
         modifier = modifier.size(38.dp),
-        backgroundColor = Color.Black.copy(alpha = 0.35f),
+        backgroundColor = backgroundColor,
         cornerRadius = 19.dp,
         minWidth = 38.dp,
         minHeight = 38.dp,
@@ -97,7 +103,7 @@ fun HeaderOverlayIcon(icon: ImageVector, onClick: () -> Unit, modifier: Modifier
         Icon(
             icon,
             contentDescription = null,
-            tint = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+            tint = contentColor,
             modifier = Modifier.size(24.dp),
         )
     }

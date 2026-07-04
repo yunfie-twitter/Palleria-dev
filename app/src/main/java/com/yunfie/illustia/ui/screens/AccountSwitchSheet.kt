@@ -119,7 +119,8 @@ private fun AccountRow(
             )
             .then(
                 Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
-            ),
+            )
+            .miuixClickable(onClick = onSelect),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

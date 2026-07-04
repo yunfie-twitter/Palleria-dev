@@ -1,5 +1,6 @@
 package com.yunfie.illustia.ui.components
 
+import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,6 +20,7 @@ import coil3.request.allowRgb565
 import coil3.request.crossfade
 import coil3.size.Precision
 import coil3.size.Scale
+import coil3.toBitmap
 import com.yunfie.illustia.data.proxyPixivImageUrl
 
 val PixivImageHeaders = NetworkHeaders.Builder()
@@ -37,6 +39,7 @@ fun PixivImage(
     modifier: Modifier = Modifier,
     crossfade: Boolean = false,
     thumbnail: Boolean = false,
+    onSuccess: ((Bitmap) -> Unit)? = null,
 ) {
     val context = LocalPlatformContext.current
     val proxyBaseUrl = LocalPixivImageProxyBaseUrl.current
@@ -50,6 +53,11 @@ fun PixivImage(
             .diskCachePolicy(CachePolicy.ENABLED)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .crossfade(!thumbnail && crossfade)
+            .listener(
+                onSuccess = { _, result ->
+                    onSuccess?.invoke(result.image.toBitmap())
+                },
+            )
             .apply {
                 if (thumbnail) {
                     size(ThumbnailDecodeSizePx)

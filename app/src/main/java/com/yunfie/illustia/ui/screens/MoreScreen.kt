@@ -61,15 +61,6 @@ fun MoreScreen(
     val quickActions = rememberQuickActions(state, viewModel, onOpenWatchlistSeries)
     val utilityActions = rememberUtilityActions(viewModel)
 
-    AccountSwitchSheet(
-        show = state.showAccountSwitcher,
-        accounts = state.settings.accounts,
-        activeAccountIndex = state.settings.activeAccountIndex,
-        viewModel = viewModel,
-        onDismiss = viewModel::closeAccountSwitcher,
-        onAddAccount = viewModel::openAccountLoginMethod,
-    )
-
     val scrollBehavior = MiuixScrollBehavior()
     Scaffold(
         containerColor = MiuixTheme.colorScheme.surface,

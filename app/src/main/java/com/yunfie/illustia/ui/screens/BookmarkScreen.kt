@@ -214,6 +214,7 @@ fun BookmarkScreen(
                         scrollBehavior = scrollBehavior,
                     )
                     2 -> BookmarkWatchlistTab(
+                        settings = settings,
                         watchlistState = watchlistState,
                         watchlistStore = watchlistStore,
                         onOpenWatchlistSeries = onOpenWatchlistSeries,

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.R
 import com.yunfie.illustia.ui.components.PredictiveBackGestureHandler
+import com.yunfie.illustia.ui.screens.AccountSwitchSheet
 import com.yunfie.illustia.ui.screens.AppLockScreen
 import com.yunfie.illustia.ui.screens.BookmarkScreen
 import com.yunfie.illustia.ui.screens.CalculatorScreen
@@ -44,6 +46,12 @@ internal fun MainSurface(
         appState.state.activeSearchWord.isNotBlank()
     val doubleBackExitMessage = stringResource(R.string.msg_double_back_exit)
 
+    LaunchedEffect(selectedTab) {
+        if (appState.state.showAccountSwitcher) {
+            viewModel.closeAccountSwitcher()
+        }
+    }
+
     PredictiveBackGestureHandler(enabled = appState.settings.doubleBackToExit) {
         val now = android.os.SystemClock.elapsedRealtime()
         if (now - lastBackAt < 1800L) {
@@ -55,6 +63,15 @@ internal fun MainSurface(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        AccountSwitchSheet(
+            show = appState.state.showAccountSwitcher,
+            accounts = appState.state.settings.accounts,
+            activeAccountIndex = appState.state.settings.activeAccountIndex,
+            viewModel = viewModel,
+            onDismiss = viewModel::closeAccountSwitcher,
+            onAddAccount = viewModel::openAccountLoginMethod,
+        )
+
         val useNavigationRail = maxWidth >= 600.dp
         Scaffold(
             containerColor = MiuixTheme.colorScheme.surface,
@@ -69,7 +86,10 @@ internal fun MainSurface(
                             val pageIndex = SwipeTabs.indexOf(tab)
                             NavigationBarItem(
                                 selected = selectedTab == tab,
-                                onClick = { onTabSelected(pageIndex, tab) },
+                                onClick = {
+                                    viewModel.closeAccountSwitcher()
+                                    onTabSelected(pageIndex, tab)
+                                },
                                 icon = tab.icon,
                                 label = stringResource(tab.labelResId),
                             )
@@ -92,7 +112,10 @@ internal fun MainSurface(
                             val pageIndex = SwipeTabs.indexOf(tab)
                             NavigationRailItem(
                                 selected = selectedTab == tab,
-                                onClick = { onTabSelected(pageIndex, tab) },
+                                onClick = {
+                                    viewModel.closeAccountSwitcher()
+                                    onTabSelected(pageIndex, tab)
+                                },
                                 icon = tab.icon,
                                 label = stringResource(tab.labelResId),
                             )
@@ -116,6 +139,7 @@ internal fun MainSurface(
                             nextUrl = appState.homeChrome.homeNextUrl,
                             timelineNextUrl = appState.homeChrome.timelineNextUrl,
                             settings = appState.settings,
+                            currentAccount = appState.state.currentAccount,
                             viewModel = viewModel,
                             onSearch = onSearch,
                             onOpenNovels = onOpenNovels,

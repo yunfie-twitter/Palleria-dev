@@ -4,8 +4,11 @@ import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.yunfie.illustia.IllustiaNavigationRequest
@@ -248,51 +252,62 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
         LocalBottomSheetBackgroundColor provides MiuixTheme.colorScheme.surfaceContainerHigh,
         LocalAppHapticMode provides AppHapticMode.fromValue(state.settings.hapticMode),
     ) {
-        if (!state.privacyLocked || state.isTransitioningToIllustia) {
-            Scaffold(
-                containerColor = MiuixTheme.colorScheme.surface,
-                contentWindowInsets = WindowInsets(0),
-                snackbarHost = {
-                    SnackbarHost(state = snackbarHostState)
-                },
-            ) { rootPadding ->
-                Surface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(rootPadding),
-                    color = MiuixTheme.colorScheme.surface,
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        AppNavHost(
-                            appState = appState,
-                            viewModel = viewModel,
-                            backStack = backStack,
-                            selectedTab = selectedTab,
-                            pagerState = pagerState,
-                            showTokenLogin = showTokenLogin,
-                            onShowTokenLoginChange = { showTokenLogin = it },
-                            selectedWatchlistSeriesId = selectedWatchlistSeriesId,
-                            onSelectedWatchlistSeriesIdChange = { selectedWatchlistSeriesId = it },
-                            selectedCommentTarget = selectedCommentTarget,
-                            onSelectedCommentTargetChange = { selectedCommentTarget = it },
-                            onNavigate = ::navigate,
-                            onPopRoute = ::popRoute,
-                            onTabSelected = { index, tab ->
-                                selectedTab = tab
-                                coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                                if (tab == AppTab.Bookmarks) viewModel.refreshBookmarks()
-                            },
-                        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (!state.privacyLocked || state.isTransitioningToIllustia) {
+                Scaffold(
+                    containerColor = MiuixTheme.colorScheme.surface,
+                    contentWindowInsets = WindowInsets(0),
+                    snackbarHost = {
+                        SnackbarHost(state = snackbarHostState)
+                    },
+                ) { rootPadding ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(rootPadding),
+                        color = MiuixTheme.colorScheme.surface,
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AppNavHost(
+                                appState = appState,
+                                viewModel = viewModel,
+                                backStack = backStack,
+                                selectedTab = selectedTab,
+                                pagerState = pagerState,
+                                showTokenLogin = showTokenLogin,
+                                onShowTokenLoginChange = { showTokenLogin = it },
+                                selectedWatchlistSeriesId = selectedWatchlistSeriesId,
+                                onSelectedWatchlistSeriesIdChange = { selectedWatchlistSeriesId = it },
+                                selectedCommentTarget = selectedCommentTarget,
+                                onSelectedCommentTargetChange = { selectedCommentTarget = it },
+                                onNavigate = ::navigate,
+                                onPopRoute = ::popRoute,
+                                onTabSelected = { index, tab ->
+                                    selectedTab = tab
+                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                    if (tab == AppTab.Bookmarks) viewModel.refreshBookmarks()
+                                },
+                            )
+                        }
                     }
                 }
+            } else {
+                CalculatorScreen(
+                    buffer = state.calculatorBuffer,
+                    history = state.calculatorHistory,
+                    isTransitioning = false,
+                    viewModel = viewModel,
+                )
             }
-        } else {
-            CalculatorScreen(
-                buffer = state.calculatorBuffer,
-                history = state.calculatorHistory,
-                isTransitioning = false,
-                viewModel = viewModel,
-            )
+
+            if (state.activeDownloads > 0) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(3.dp),
+                )
+            }
         }
     }
 }

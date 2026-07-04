@@ -10,7 +10,6 @@ enum class NetworkMode(val code: String) {
 
     companion object {
         fun fromCode(code: String?): NetworkMode {
-            if (code == Compat.code) return Ech
             for (mode in entries) {
                 if (mode.code == code) return mode
             }

@@ -13,6 +13,7 @@ data class MangaSeriesModel(
     val user: MangaSeriesUser? = null,
     val lastPublishedContentDatetime: String? = null,
     val latestContentId: Long = 0L,
+    val thumbnailUrl: String? = null,
 )
 
 data class MangaSeriesUser(

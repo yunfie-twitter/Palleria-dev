@@ -1,22 +1,16 @@
 package com.yunfie.illustia.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,77 +19,35 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import com.yunfie.illustia.R
+import androidx.compose.ui.util.fastForEach
 import com.yunfie.illustia.ui.components.PixivImage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.tween
-
-@Composable
-internal fun ViewerThumbnailStrip(
-    imageUrls: List<String>,
-    thumbnailUrls: List<String>,
-    currentPage: Int,
-    onPageSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    ) {
-        LazyRow(
-            modifier = modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            itemsIndexed(imageUrls, key = { index, _ -> index }) { index, _ ->
-                val selected = currentPage == index
-                Box(
-                    modifier = Modifier
-                        .size(width = 46.dp, height = 58.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainerHigh)
-                        .then(
-                            if (selected) Modifier.border(
-                                width = 2.dp,
-                                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary,
-                                shape = RoundedCornerShape(10.dp),
-                            ) else Modifier
-                        )
-                        .padding(if (selected) 3.dp else 1.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onPageSelected(index) },
-                ) {
-                    PixivImage(
-                        url = thumbnailUrls.getOrElse(index) { imageUrls[index] },
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                    thumbnail = true,
-                )
-            }
-        }
-    }
-}
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.foundation.gestures.detectTransformGestures
+import kotlin.math.abs
 
 @Composable
 internal fun ZoomablePixivImage(
     url: String,
     contentDescription: String,
     isActive: Boolean,
+    swipeThresholdPx: Float,
+    onSwipePrevious: () -> Unit,
+    onSwipeNext: () -> Unit,
     onZoomChanged: (Boolean) -> Unit,
     onTap: () -> Unit,
 ) {
@@ -118,6 +70,17 @@ internal fun ZoomablePixivImage(
         val maxX = viewportSize.width * (atScale - 1f) / 2f
         val maxY = viewportSize.height * (atScale - 1f) / 2f
         return Offset(candidate.x.coerceIn(-maxX, maxX), candidate.y.coerceIn(-maxY, maxY))
+    }
+
+    fun isAtHorizontalEdge(offset: Offset, atScale: Float, panX: Float): Boolean {
+        if (viewportSize.width == 0) return false
+        val maxX = viewportSize.width * (atScale - 1f) / 2f
+        val edgeEpsilon = 1f
+        return when {
+            panX < 0 -> offset.x <= -maxX + edgeEpsilon
+            panX > 0 -> offset.x >= maxX - edgeEpsilon
+            else -> false
+        }
     }
 
     fun animateTo(targetScale: Float, targetOffset: Offset) {
@@ -182,6 +145,19 @@ internal fun ZoomablePixivImage(
                     val focalPoint = centroid - viewportCenter
                     val transformedOffset = localOffset + pan +
                         (focalPoint - localOffset) * (1f - appliedZoom)
+
+                    if (nextScale > 1.02f && abs(pan.x) > abs(pan.y) && abs(pan.x) >= swipeThresholdPx) {
+                        val clampedCurrent = clampedOffset(localOffset, localScale)
+                        if (isAtHorizontalEdge(clampedCurrent, localScale, pan.x)) {
+                            if (pan.x < 0) {
+                                onSwipeNext()
+                            } else {
+                                onSwipePrevious()
+                            }
+                            animateTo(1f, Offset.Zero)
+                            return@detectTransformGestures
+                        }
+                    }
 
                     localScale = nextScale
                     localOffset = if (localScale > 1.02f) {

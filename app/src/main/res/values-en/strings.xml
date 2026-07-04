@@ -137,6 +137,7 @@
     <string name="detail_unmute">Unmute</string>
     <string name="detail_no_caption">No caption</string>
     <string name="detail_comments">Comments</string>
+    <string name="detail_show_comments">Show Comments</string>
     <string name="detail_comments_empty">No comments yet</string>
     <string name="detail_series">Series</string>
     <string name="detail_related">Related Works</string>
@@ -184,7 +185,7 @@
     <string name="settings_general">General</string>
     <string name="settings_general_summary">Display, Interaction &amp; Startup</string>
     <string name="settings_image">Image</string>
-    <string name="settings_image_summary">Quality, Layout &amp; Proxy</string>
+    <string name="settings_image_summary">Quality, Layout, Connection &amp; Proxy</string>
     <string name="settings_bookmark">Bookmark</string>
     <string name="settings_bookmark_summary">Save &amp; Confirmation</string>
     <string name="settings_account">Account</string>
@@ -294,9 +295,9 @@
     <string name="detail_save_offline">Added to saved list.</string>
     <string name="image_section_quality">Quality</string>
     <string name="image_section_layout">Layout</string>
-    <string name="image_viewer_thumbnails_in_toolbar">Show thumbnails in toolbar</string>
-    <string name="image_viewer_thumbnails_in_toolbar_desc">Turn off to show them separately above the fullscreen toolbar</string>
     <string name="image_section_proxy">Proxy</string>
+    <string name="image_pixiv_network_mode">Pixiv connection mode</string>
+    <string name="image_pixiv_network_mode_desc">Switch between ECH, compat, and standard</string>
     <string name="image_high_quality">Use High Quality Images</string>
     <string name="image_high_quality_desc">May increase mobile data usage</string>
     <string name="image_prefetch">Prefetch Images</string>
@@ -312,6 +313,9 @@
     <string name="image_quality_high">High</string>
     <string name="image_quality_medium">Medium</string>
     <string name="image_quality_low">Low</string>
+    <string name="pixiv_network_mode_standard">standard</string>
+    <string name="pixiv_network_mode_ech">ech</string>
+    <string name="pixiv_network_mode_compat">compat</string>
     <string name="image_proxy_none">None</string>
     <string name="image_proxy_custom">Custom Server</string>
     <string name="image_proxy_custom_dialog_title">Enter Custom Server</string>
@@ -458,7 +462,6 @@
     <string name="illust_load_more">Load More</string>
 
     <!-- Toast / Snackbar messages -->
-    <string name="msg_pixiv_connected">Connected to Pixiv.</string>
     <string name="msg_web_login_complete">Pixiv web login completed.</string>
     <string name="msg_logged_out">Logged out.</string>
     <string name="msg_shared_image_received">Received shared image. Image-based search is not yet supported.</string>
@@ -466,8 +469,6 @@
     <string name="msg_mute_data_deleted">Mute data deleted.</string>
     <string name="msg_watchlist_tag_added">Added #%1$s to Watchlist.</string>
     <string name="msg_watchlist_tag_removed">Removed #%1$s from Watchlist.</string>
-    <string name="msg_image_saving">Saving images… (%1$d/%2$d)</string>
-    <string name="msg_image_saved">Image saved.</string>
     <string name="msg_no_saveable_images">No saveable images.</string>
     <string name="msg_save_started">Started saving %1$d pages.</string>
     <string name="msg_cache_deleted">Cache deleted.</string>

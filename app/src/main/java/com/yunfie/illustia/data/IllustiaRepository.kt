@@ -2,6 +2,7 @@ package com.yunfie.illustia.data
 
 import com.yunfie.illustia.models.HomeFeedKind
 import com.yunfie.illustia.models.Illust
+import com.yunfie.illustia.models.NetworkMode
 import com.yunfie.illustia.models.PageResult
 import com.yunfie.illustia.models.PixivSession
 import com.yunfie.illustia.models.Restrict
@@ -21,28 +22,35 @@ import com.yunfie.illustia.settings.SettingsStore
 
 class IllustiaRepository(
     private val settingsStore: SettingsStore,
-    providedApiClient: PixivApiClient? = null,
 ) {
     private var session: PixivSession? = null
     private var cachedSettings: AppSettings? = null
-    private val apiClient: PixivApiClient by lazy { providedApiClient ?: PixivApiClient() }
+    @Volatile
+    private var apiClientMode: NetworkMode = NetworkMode.Standard
+    @Volatile
+    private var apiClient: PixivApiClient = PixivApiClient()
 
     suspend fun readSettings(): AppSettings {
-        return cachedSettings ?: settingsStore.read().also { cachedSettings = it }
+        val settings = cachedSettings ?: settingsStore.read().also { cachedSettings = it }
+        ensureApiClient(NetworkMode.fromCode(settings.pixivNetworkMode))
+        return settings
     }
 
     suspend fun saveSettings(settings: AppSettings) {
         cachedSettings = settings
+        ensureApiClient(NetworkMode.fromCode(settings.pixivNetworkMode))
         settingsStore.write(settings)
     }
 
     suspend fun login(refreshToken: String): PixivSession {
+        ensureApiClient(NetworkMode.fromCode(readSettings().pixivNetworkMode))
         val nextSession = apiClient.loginWithRefreshToken(refreshToken)
         persistSession(nextSession)
         return nextSession
     }
 
     suspend fun loginWithAuthorizationCode(code: String, codeVerifier: String): PixivSession {
+        ensureApiClient(NetworkMode.fromCode(readSettings().pixivNetworkMode))
         val nextSession = apiClient.loginWithAuthorizationCode(code, codeVerifier)
         persistSession(nextSession)
         return nextSession
@@ -62,7 +70,7 @@ class IllustiaRepository(
     suspend fun logout() {
         session = null
         settingsStore.clearSensitive()
-        cachedSettings = settingsStore.read()
+        cachedSettings = settingsStore.read().also { ensureApiClient(NetworkMode.fromCode(it.pixivNetworkMode)) }
     }
 
     suspend fun loadRanking(mode: String): PageResult<Illust> {
@@ -278,6 +286,16 @@ class IllustiaRepository(
         val refreshToken = settings.refreshToken
         require(refreshToken.isNotBlank()) { "Pixiv refresh token が未設定です。" }
         return login(refreshToken)
+    }
+
+    private fun ensureApiClient(mode: NetworkMode) {
+        if (apiClientMode == mode) return
+        synchronized(this) {
+            if (apiClientMode != mode) {
+                apiClient = PixivApiClient(mode)
+                apiClientMode = mode
+            }
+        }
     }
 
     private fun Throwable.isPixivAuthExpired(): Boolean {

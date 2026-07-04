@@ -2,17 +2,25 @@ package com.yunfie.illustia.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -22,13 +30,13 @@ import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.R
 import com.yunfie.illustia.data.pixiv.WatchlistStore
 import com.yunfie.illustia.models.pixiv.MangaSeriesModel
-import com.yunfie.illustia.ui.components.ElevatedPanel
 import com.yunfie.illustia.ui.components.EmptyState
-import com.yunfie.illustia.ui.components.LoadingIndicator
-import com.yunfie.illustia.ui.components.miuixClickable
-import com.yunfie.illustia.ui.components.overlayActionButtonColors
+import com.yunfie.illustia.ui.components.PixivImage
+import com.yunfie.illustia.ui.components.adaptiveIllustColumns
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.PullToRefresh
@@ -37,9 +45,9 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -51,6 +59,7 @@ fun WatchlistSeriesScreen(
     val repository = remember(viewModel) { viewModel.uiRepository() }
     val store = remember(repository) { WatchlistStore(repository) }
     val state by store.state.collectAsStateWithLifecycle()
+    val settings by viewModel.settingsState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(store) {
@@ -81,7 +90,10 @@ fun WatchlistSeriesScreen(
             onRefresh = { scope.launch { store.fetch() } },
             modifier = Modifier.fillMaxSize(),
         ) {
-            LazyColumn(
+            val gridState = rememberLazyGridState()
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Fixed(adaptiveIllustColumns(settings)),
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MiuixTheme.colorScheme.surface),
@@ -91,35 +103,38 @@ fun WatchlistSeriesScreen(
                     top = scaffoldPadding.calculateTopPadding() + 8.dp,
                     bottom = 24.dp,
                 ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                if (state.isLoading && state.mangaSeries.isEmpty()) {
+                    gridItems(List(6) { it }, contentType = { "watchlist_series_skeleton" }) {
+                        WatchlistSeriesCardSkeleton()
+                    }
+                }
                 if (state.errorMessage != null) {
-                    item { Text(state.errorMessage ?: "", color = MiuixTheme.colorScheme.error) }
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = state.errorMessage ?: "",
+                            color = MiuixTheme.colorScheme.error,
+                        )
+                    }
                 }
                 if (state.mangaSeries.isEmpty() && !state.isLoading) {
-                    item { EmptyState(stringResource(R.string.watchlist_series_empty)) }
+                    item(span = { GridItemSpan(maxLineSpan) }) { EmptyState(stringResource(R.string.watchlist_series_empty)) }
                 }
-                items(state.mangaSeries, key = { it.id }) { series ->
-                    WatchlistSeriesRow(
+                gridItems(state.mangaSeries, key = { it.id }, contentType = { "watchlist_series_card" }) { series ->
+                    WatchlistSeriesCard(
                         series = series,
                         onClick = { onOpenSeries(series.id) },
                     )
                 }
                 if (state.model?.nextUrl != null) {
-                    item {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         Button(
                             onClick = { scope.launch { store.loadMore() } },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = overlayActionButtonColors(),
                         ) {
                             Text(stringResource(R.string.watchlist_series_load_more))
-                        }
-                    }
-                }
-                if (state.isLoading && state.mangaSeries.isEmpty()) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            LoadingIndicator()
                         }
                     }
                 }
@@ -129,39 +144,73 @@ fun WatchlistSeriesScreen(
 }
 
 @Composable
-private fun WatchlistSeriesRow(
+private fun WatchlistSeriesCard(
     series: MangaSeriesModel,
     onClick: () -> Unit,
 ) {
-    ElevatedPanel(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .miuixClickable(onClick = onClick),
+            .heightIn(min = 180.dp),
+        cornerRadius = 16.dp,
+        insideMargin = PaddingValues(0.dp),
+        colors = CardDefaults.defaultColors(
+            color = Color.Transparent,
+            contentColor = MiuixTheme.colorScheme.onBackground,
+        ),
+        pressFeedbackType = PressFeedbackType.Sink,
+        onClick = onClick,
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .fillMaxWidth()
+                    .aspectRatio(1.15f)
                     .clip(RoundedCornerShape(18.dp))
                     .background(MiuixTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = MiuixIcons.FavoritesFill,
-                    contentDescription = null,
-                    tint = MiuixTheme.colorScheme.primary,
-                )
+                val thumbnailUrl = series.thumbnailUrl
+                if (!thumbnailUrl.isNullOrBlank()) {
+                    PixivImage(
+                        url = thumbnailUrl,
+                        contentDescription = series.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        thumbnail = true,
+                    )
+                } else {
+                    Icon(
+                        imageVector = MiuixIcons.FavoritesFill,
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.primary,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.9f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = "${series.publishedContentCount}P",
+                        color = MiuixTheme.colorScheme.onBackground,
+                        style = MiuixTheme.textStyles.footnote2,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
             }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     text = series.title,
-                    style = MiuixTheme.textStyles.body1,
+                    style = MiuixTheme.textStyles.subtitle,
                     fontWeight = FontWeight.Black,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -174,15 +223,72 @@ private fun WatchlistSeriesRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "ID ${series.id} ・ ${series.publishedContentCount}P",
+                    text = "ID ${series.id}",
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     style = MiuixTheme.textStyles.footnote2,
                 )
             }
-            Icon(
-                imageVector = MiuixIcons.ChevronForward,
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        }
+    }
+}
+
+@Composable
+private fun WatchlistSeriesCardSkeleton() {
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "watchlistSeriesSkeleton")
+    val shimmer by transition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(
+                durationMillis = 1250,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing,
+            ),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Restart,
+        ),
+        label = "watchlistSeriesSkeletonShimmer",
+    )
+    val base = MiuixTheme.colorScheme.surfaceContainer
+    val highlight = MiuixTheme.colorScheme.surfaceContainerHigh
+    val shimmerBrush = Brush.linearGradient(
+        colors = listOf(base, highlight, base),
+        start = Offset(shimmer * 500f, 0f),
+        end = Offset(shimmer * 500f + 260f, 500f),
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 180.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1.15f)
+                .clip(RoundedCornerShape(18.dp))
+                .background(shimmerBrush),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.82f)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(shimmerBrush),
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.58f)
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(shimmerBrush),
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.34f)
+                    .height(9.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(shimmerBrush),
             )
         }
     }

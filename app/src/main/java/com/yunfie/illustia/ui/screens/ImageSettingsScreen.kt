@@ -21,6 +21,8 @@ import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.R
 import com.yunfie.illustia.data.PixivImageProxyOptions
 import com.yunfie.illustia.nativebridge.NativeImageStore
+import com.yunfie.illustia.settings.pixivNetworkModeLabel
+import com.yunfie.illustia.settings.pixivNetworkModeOptions
 import com.yunfie.illustia.ui.components.DividerLine
 import com.yunfie.illustia.ui.components.ElevatedPanel
 import com.yunfie.illustia.ui.components.HeaderIcon
@@ -118,13 +120,6 @@ fun ImageSettingsScreen(
 
             item { Section(stringResource(R.string.image_section_layout)) {
                 ElevatedPanel {
-                    SettingSwitchRow(
-                        title = stringResource(R.string.image_viewer_thumbnails_in_toolbar),
-                        checked = state.settings.viewerThumbnailsInToolbar,
-                        onCheckedChange = viewModel::updateViewerThumbnailsInToolbar,
-                        summary = stringResource(R.string.image_viewer_thumbnails_in_toolbar_desc),
-                    )
-                    DividerLine()
                     SettingDropdownRow(
                         title = stringResource(R.string.image_simultaneous_downloads),
                         values = listOf(1, 2, 3, 4),
@@ -178,6 +173,15 @@ fun ImageSettingsScreen(
 
             item { Section(stringResource(R.string.image_section_proxy)) {
                 ElevatedPanel {
+                    SettingDropdownRow(
+                        title = stringResource(R.string.image_pixiv_network_mode),
+                        summary = stringResource(R.string.image_pixiv_network_mode_desc),
+                        values = pixivNetworkModeOptions(),
+                        selected = state.settings.pixivNetworkMode,
+                        label = { pixivNetworkModeLabel(it) },
+                        onSelect = viewModel::updatePixivNetworkMode,
+                    )
+                    DividerLine()
                     val currentProxy = state.settings.pixivImageProxyBaseUrl
                     val isCustomActive = currentProxy.isNotBlank() && PixivImageProxyOptions.none { it.baseUrl == currentProxy }
                     val proxyOptions = remember(currentProxy) {

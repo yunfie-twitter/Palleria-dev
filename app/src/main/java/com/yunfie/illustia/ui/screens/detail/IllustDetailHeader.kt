@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
 import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -22,7 +24,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -50,6 +55,7 @@ import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.menu.WindowIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.math.pow
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -89,6 +95,7 @@ internal fun IllustDetailHeader(
     val browserFailedMessage = stringResource(R.string.error_browser_failed)
     val shareFailedMessage = stringResource(R.string.error_share_failed)
     val urlCopiedMessage = stringResource(R.string.msg_url_copied)
+    var useDarkHeaderIcons by remember(illust.id) { mutableStateOf(false) }
     val imageUrls = remember(illust.id, highQualityImages, detailQuality) {
         when {
             !highQualityImages || detailQuality == "low" -> illust.mediumImagePages.ifEmpty {
@@ -134,6 +141,11 @@ internal fun IllustDetailHeader(
                                 },
                             ),
                         crossfade = true,
+                        onSuccess = { bitmap ->
+                            if (page == pagerState.currentPage) {
+                                useDarkHeaderIcons = shouldUseDarkHeaderIcons(bitmap)
+                            }
+                        },
                     )
                     if (maskMutedArtwork) {
                         Box(
@@ -182,7 +194,22 @@ internal fun IllustDetailHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderOverlayIcon(MiuixIcons.Back, onBack)
+            val headerIconBackground = if (useDarkHeaderIcons) {
+                Color.White.copy(alpha = 0.58f)
+            } else {
+                Color.Black.copy(alpha = 0.35f)
+            }
+            val headerIconTint = if (useDarkHeaderIcons) {
+                Color.Black.copy(alpha = 0.92f)
+            } else {
+                Color.White.copy(alpha = 0.92f)
+            }
+            HeaderOverlayIcon(
+                MiuixIcons.Back,
+                onBack,
+                backgroundColor = headerIconBackground,
+                contentColor = headerIconTint,
+            )
             WindowIconDropdownMenu(
                 entries = listOf(
                     DropdownEntry(
@@ -249,12 +276,12 @@ internal fun IllustDetailHeader(
                         ),
                     ),
                 ),
-                backgroundColor = Color.Black.copy(alpha = 0.35f),
+                backgroundColor = headerIconBackground,
                 cornerRadius = 19.dp,
                 minWidth = 38.dp,
                 minHeight = 38.dp,
             ) {
-                Icon(MiuixIcons.More, contentDescription = moreLabel, tint = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.9f), modifier = Modifier.size(24.dp))
+                Icon(MiuixIcons.More, contentDescription = moreLabel, tint = headerIconTint, modifier = Modifier.size(24.dp))
             }
         }
     }
@@ -298,4 +325,64 @@ internal fun MutedArtworkOverlay(
             Text(stringResource(R.string.action_show), color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
+}
+
+private fun shouldUseDarkHeaderIcons(bitmap: Bitmap): Boolean {
+    if (bitmap.width <= 0 || bitmap.height <= 0) return false
+
+    val edgeInsetX = (bitmap.width / 6).coerceAtLeast(1)
+    val edgeInsetY = (bitmap.height / 6).coerceAtLeast(1)
+    val stepX = (bitmap.width / 32).coerceAtLeast(1)
+    val stepY = (bitmap.height / 32).coerceAtLeast(1)
+
+    var totalLuminance = 0.0
+    var sampleCount = 0
+
+    for (y in 0 until bitmap.height step stepY) {
+        val isEdgeRow = y < edgeInsetY || y >= bitmap.height - edgeInsetY
+        for (x in 0 until bitmap.width step stepX) {
+            val isEdgeColumn = x < edgeInsetX || x >= bitmap.width - edgeInsetX
+            if (!isEdgeRow && !isEdgeColumn) continue
+
+            val pixel = bitmap.getPixel(x, y)
+            if (AndroidColor.alpha(pixel) < 16) continue
+
+            totalLuminance += relativeLuminance(pixel)
+            sampleCount++
+        }
+    }
+
+    if (sampleCount == 0) {
+        val fallbackStepX = (bitmap.width / 40).coerceAtLeast(1)
+        val fallbackStepY = (bitmap.height / 40).coerceAtLeast(1)
+        for (y in 0 until bitmap.height step fallbackStepY) {
+            for (x in 0 until bitmap.width step fallbackStepX) {
+                val pixel = bitmap.getPixel(x, y)
+                if (AndroidColor.alpha(pixel) < 16) continue
+
+                totalLuminance += relativeLuminance(pixel)
+                sampleCount++
+            }
+        }
+    }
+
+    if (sampleCount == 0) return false
+
+    val averageLuminance = totalLuminance / sampleCount
+    return averageLuminance >= 0.58
+}
+
+private fun relativeLuminance(color: Int): Double {
+    fun linearize(channel: Int): Double {
+        val normalized = channel / 255.0
+        return if (normalized <= 0.03928) {
+            normalized / 12.92
+        } else {
+            ((normalized + 0.055) / 1.055).pow(2.4)
+        }
+    }
+
+    return 0.2126 * linearize(AndroidColor.red(color)) +
+        0.7152 * linearize(AndroidColor.green(color)) +
+        0.0722 * linearize(AndroidColor.blue(color))
 }

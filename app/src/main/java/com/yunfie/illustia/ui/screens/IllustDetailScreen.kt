@@ -221,7 +221,6 @@ fun IllustDetailScreen(
                     illust = illust,
                     isArtistFollowed = isArtistFollowed,
                     isArtistMuted = isArtistMuted,
-                    firstComment = firstComment,
                     onOpenUser = { onOpenUser(illust.artistId) },
                     onOpenUserById = onOpenUser,
                     onOpenIllustById = onOpenIllustById,

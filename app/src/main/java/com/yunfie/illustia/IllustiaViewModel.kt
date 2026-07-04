@@ -17,7 +17,6 @@ import com.yunfie.illustia.models.HomeFeedKind
 import com.yunfie.illustia.models.Illust
 import com.yunfie.illustia.data.IllustiaRepository
 import com.yunfie.illustia.models.LoadState
-import com.yunfie.illustia.data.PixivApiClient
 import com.yunfie.illustia.data.PixivApiException
 import com.yunfie.illustia.models.NovelPreview
 import com.yunfie.illustia.models.NovelTextContent
@@ -79,12 +78,11 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         val relatedIllusts: List<Illust>,
     )
 
-    private val repository by lazy {
-        IllustiaRepository(
-            SettingsStore(getApplication<Application>().applicationContext),
-            PixivApiClient((getApplication<Application>() as IllustiaApplication).sharedHttpClient),
-        )
-    }
+        private val repository by lazy {
+            IllustiaRepository(
+                SettingsStore(getApplication<Application>().applicationContext),
+            )
+        }
 
     fun uiRepository(): IllustiaRepository = repository
     private val imageStore by lazy { NativeImageStore(getApplication<Application>().applicationContext) }
@@ -711,10 +709,6 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         updateSettings { it.copy(fullscreenQuality = value) }
     }
 
-    fun updateViewerThumbnailsInToolbar(value: Boolean) {
-        updateSettings { it.copy(viewerThumbnailsInToolbar = value) }
-    }
-
     fun updateStartupScreen(value: String) {
         updateSettings { it.copy(startupScreen = value) }
     }
@@ -729,6 +723,10 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updatePixivImageProxyBaseUrl(value: String) {
         updateSettings { it.copy(pixivImageProxyBaseUrl = value) }
+    }
+
+    fun updatePixivNetworkMode(value: String) {
+        updateSettings { it.copy(pixivNetworkMode = value) }
     }
 
     fun updateRestrict(value: Restrict) {
@@ -779,7 +777,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         val refreshToken = _uiState.value.settings.refreshToken
         runLoading {
             val session = repository.login(refreshToken)
-            applyLoggedInSession(session.accessToken.isNotBlank(), str(R.string.msg_pixiv_connected))
+            applyLoggedInSession(session.accessToken.isNotBlank())
             loadHomeInternal(_uiState.value.homeKind)
         }
     }
@@ -1600,7 +1598,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
             var terminalStatus: DownloadQueueStatus? = null
             acquireDownloadSlot()
             updateDownloadQueueStatus(queueId, DownloadQueueStatus.Downloading)
-            _uiState.update { it.copy(loadState = LoadState.Loading, message = str(R.string.msg_image_saving, it.activeDownloads, it.settings.simultaneousDownloads.coerceIn(1, 4))) }
+            _uiState.update { it.copy(loadState = LoadState.Loading, message = null) }
             try {
                 val currentIllust = resolveDownloadIllust(filename)
                 val targetName = buildDownloadPath(filename, currentIllust)
@@ -1617,7 +1615,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     updateIllustEverywhere(updated)
                 }
                 terminalStatus = DownloadQueueStatus.Completed
-                _uiState.update { it.copy(loadState = LoadState.Loaded, message = str(R.string.msg_image_saved)) }
+                _uiState.update { it.copy(loadState = LoadState.Loaded) }
             } catch (error: Throwable) {
                 if (isCancellation(error)) {
                     throw error
@@ -2300,7 +2298,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private suspend fun applyLoggedInSession(sessionReady: Boolean, message: String) {
+    private suspend fun applyLoggedInSession(sessionReady: Boolean, message: String? = null) {
         val nextSettings = repository.readSettings()
         _uiState.update {
             it.copy(
@@ -2493,6 +2491,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 val newWatchlist = state.watchlistItems.replaceIllustIfPresent(updated)
                 val newRanking = state.rankingItems.replaceIllustIfPresent(updated)
                 val newRelated = state.relatedIllusts.replaceIllustIfPresent(updated)
+                val newHistory = state.settings.viewHistory.replaceIllustIfPresent(updated)
                 val newBookmarks = if (updated.isBookmarked) {
                     state.bookmarkItems.replaceOrAppend(updated)
                 } else {
@@ -2508,6 +2507,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     newWatchlist === state.watchlistItems &&
                     newRanking === state.rankingItems &&
                     newRelated === state.relatedIllusts &&
+                    newHistory === state.settings.viewHistory &&
                     newBookmarks === state.bookmarkItems &&
                     newUserIllusts === state.selectedUserIllusts &&
                     newUserBookmarks === state.selectedUserBookmarks &&
@@ -2522,6 +2522,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                         watchlistItems = newWatchlist,
                         rankingItems = newRanking,
                         relatedIllusts = newRelated,
+                        settings = state.settings.copy(viewHistory = newHistory),
                         bookmarkItems = newBookmarks,
                         selectedUserIllusts = newUserIllusts,
                         selectedUserBookmarks = newUserBookmarks,

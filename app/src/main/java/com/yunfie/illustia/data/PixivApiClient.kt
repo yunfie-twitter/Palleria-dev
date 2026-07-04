@@ -5,6 +5,7 @@ import com.yunfie.illustia.models.NovelPreview
 import com.yunfie.illustia.models.NovelTextContent
 import com.yunfie.illustia.models.PageResult
 import com.yunfie.illustia.models.PixivSession
+import com.yunfie.illustia.models.NetworkMode
 import com.yunfie.illustia.models.Restrict
 import com.yunfie.illustia.models.SearchBookmarkFilter
 import com.yunfie.illustia.models.SearchDuration
@@ -34,8 +35,10 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class PixivApiClient(
-    private val httpClient: OkHttpClient = createPixivHttpClient(),
+    mode: NetworkMode = NetworkMode.Standard,
 ) {
+    private val httpClient: OkHttpClient = createPixivHttpClient(mode)
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
