@@ -401,6 +401,14 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         updateSettings { it.copy(userProfileBottomSheetEnabled = value) }
     }
 
+    fun updateShortsFeedEnabled(value: Boolean) {
+        updateSettings { it.copy(shortsFeedEnabled = value) }
+    }
+
+    fun updateDisableHorizontalSwipeInShortsFeed(value: Boolean) {
+        updateSettings { it.copy(disableHorizontalSwipeInShortsFeed = value) }
+    }
+
     fun updateShowAiBadge(value: Boolean) {
         updateSettings { it.copy(showAiBadge = value) }
     }
@@ -1201,6 +1209,48 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 it.copy(
                     timelineItems = it.timelineItems.appendIllusts(page.items.visibleWithSettings(it.settings)),
                     timelineNextUrl = page.nextUrl,
+                )
+            }
+        }
+    }
+
+    fun refreshShortsFeed() {
+        runLoading {
+            val homePage = repository.loadHome(HomeFeedKind.Recommended)
+            val followingPage = repository.followingIllusts(_uiState.value.settings.bookmarkRestrict)
+            _uiState.update { state ->
+                val home = homePage.items.visibleWithSettings(state.settings)
+                val following = followingPage.items.visibleWithSettings(state.settings)
+                state.copy(
+                    shortsFeedItems = interleaveIllusts(home, following),
+                    shortsFeedHomeNextUrl = homePage.nextUrl,
+                    shortsFeedFollowingNextUrl = followingPage.nextUrl,
+                )
+            }
+        }
+    }
+
+    fun updateShortsFeedCurrentIllust(illustId: Long) {
+        _uiState.update { it.copy(shortsFeedCurrentIllustId = illustId) }
+    }
+
+    fun loadMoreShortsFeed() {
+        val state = _uiState.value
+        val homeNextUrl = state.shortsFeedHomeNextUrl
+        val followingNextUrl = state.shortsFeedFollowingNextUrl
+        if (homeNextUrl == null && followingNextUrl == null) return
+        runLoading {
+            val homePage = homeNextUrl?.let { repository.nextPage(it) }
+            val followingPage = followingNextUrl?.let { repository.nextPage(it) }
+            _uiState.update { current ->
+                val additions = interleaveIllusts(
+                    homePage?.items.orEmpty().visibleWithSettings(current.settings),
+                    followingPage?.items.orEmpty().visibleWithSettings(current.settings),
+                )
+                current.copy(
+                    shortsFeedItems = current.shortsFeedItems.appendIllusts(additions),
+                    shortsFeedHomeNextUrl = homePage?.nextUrl,
+                    shortsFeedFollowingNextUrl = followingPage?.nextUrl,
                 )
             }
         }
@@ -2782,6 +2832,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 val newHome = state.homeItems.replaceIllustIfPresent(updated)
                 val newSearch = state.searchItems.replaceIllustIfPresent(updated)
                 val newTimeline = state.timelineItems.replaceIllustIfPresent(updated)
+                val newShortsFeed = state.shortsFeedItems.replaceIllustIfPresent(updated)
                 val newWatchlist = state.watchlistItems.replaceIllustIfPresent(updated)
                 val newRanking = state.rankingItems.replaceIllustIfPresent(updated)
                 val newRelated = state.relatedIllusts.replaceIllustIfPresent(updated)
@@ -2798,6 +2849,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 if (newHome === state.homeItems &&
                     newSearch === state.searchItems &&
                     newTimeline === state.timelineItems &&
+                    newShortsFeed === state.shortsFeedItems &&
                     newWatchlist === state.watchlistItems &&
                     newRanking === state.rankingItems &&
                     newRelated === state.relatedIllusts &&
@@ -2813,6 +2865,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                         homeItems = newHome,
                         searchItems = newSearch,
                         timelineItems = newTimeline,
+                        shortsFeedItems = newShortsFeed,
                         watchlistItems = newWatchlist,
                         rankingItems = newRanking,
                         relatedIllusts = newRelated,
@@ -2928,4 +2981,11 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
+
+private fun interleaveIllusts(first: List<Illust>, second: List<Illust>): List<Illust> = buildList {
+    repeat(maxOf(first.size, second.size)) { index ->
+        first.getOrNull(index)?.let(::add)
+        second.getOrNull(index)?.let(::add)
+    }
+}.distinctBy(Illust::id)
 
