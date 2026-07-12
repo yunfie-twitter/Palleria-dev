@@ -566,4 +566,14 @@
     <string name="viewer_page_mode">ページ送り</string>
     <string name="wallpaper_playlist">壁紙プレイリスト</string>
     <string name="wallpaper_playlist_desc">オフライン保存した画像から壁紙を自動で切り替えます</string>
+    <string name="image_manga_reader_mode">複数ページ作品の表示</string>
+    <string name="image_manga_reader_mode_desc">作品ページを横送りまたは縦読みで表示します</string>
+    <string name="image_section_cache">キャッシュ</string>
+    <string name="image_smart_cache">スマートキャッシュ</string>
+    <string name="image_smart_cache_desc">フィードの次の作品を先読みして表示を速くします</string>
+    <string name="image_smart_cache_wifi">Wi-Fi接続時のみ</string>
+    <string name="image_smart_cache_wifi_desc">モバイル通信では先読みしません</string>
+    <string name="image_smart_cache_count">先読みする作品数</string>
+    <string name="image_cache_capacity">画像キャッシュ容量</string>
+    <string name="image_cache_capacity_desc">容量変更は次回起動時に反映されます</string>
 </resources>

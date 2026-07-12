@@ -17,6 +17,7 @@ import okio.Path.Companion.toOkioPath
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.TimeUnit
 
 class IllustiaApplication : Application() {
@@ -44,6 +45,9 @@ class IllustiaApplication : Application() {
         val appContext = applicationContext
         val httpClient = sharedHttpClient
         val cacheDirectory = cacheDir.resolve("image_cache").toOkioPath()
+        val configuredCacheMb = runCatching {
+            runBlocking(Dispatchers.IO) { com.yunfie.illustia.settings.SettingsStore(appContext).read().imageCacheSizeMb }
+        }.getOrDefault(300).coerceIn(100, 1000)
         appScope.launch {
             RankingWidgetProvider.publishPreview(appContext)
             IllustWidgetProvider.publishPreview(appContext)
@@ -63,7 +67,7 @@ class IllustiaApplication : Application() {
                 .diskCache {
                     DiskCache.Builder()
                         .directory(cacheDirectory)
-                        .maxSizeBytes(150L * 1024 * 1024)
+                        .maxSizeBytes(configuredCacheMb.toLong() * 1024 * 1024)
                         .build()
                 }
                 .build()

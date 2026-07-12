@@ -115,6 +115,50 @@ fun ImageSettingsScreen(
                         label = { qualityLabel(it) },
                         onSelect = viewModel::updateFullscreenQuality,
                     )
+                    DividerLine()
+                    SettingDropdownRow(
+                        title = stringResource(R.string.image_manga_reader_mode),
+                        summary = stringResource(R.string.image_manga_reader_mode_desc),
+                        values = listOf("paged", "vertical"),
+                        selected = state.settings.mangaReaderMode,
+                        label = { if (it == "vertical") stringResource(R.string.viewer_comic_mode) else stringResource(R.string.viewer_page_mode) },
+                        onSelect = viewModel::updateMangaReaderMode,
+                    )
+                }
+            }}
+
+            item { Section(stringResource(R.string.image_section_cache)) {
+                ElevatedPanel {
+                    SettingSwitchRow(
+                        title = stringResource(R.string.image_smart_cache),
+                        checked = state.settings.smartCacheEnabled,
+                        onCheckedChange = viewModel::updateSmartCacheEnabled,
+                        summary = stringResource(R.string.image_smart_cache_desc),
+                    )
+                    DividerLine()
+                    SettingSwitchRow(
+                        title = stringResource(R.string.image_smart_cache_wifi),
+                        checked = state.settings.smartCacheWifiOnly,
+                        onCheckedChange = viewModel::updateSmartCacheWifiOnly,
+                        summary = stringResource(R.string.image_smart_cache_wifi_desc),
+                    )
+                    DividerLine()
+                    SettingDropdownRow(
+                        title = stringResource(R.string.image_smart_cache_count),
+                        values = listOf(6, 12, 20, 30),
+                        selected = state.settings.smartCacheItemCount,
+                        label = { stringResource(R.string.data_items_count, it) },
+                        onSelect = viewModel::updateSmartCacheItemCount,
+                    )
+                    DividerLine()
+                    SettingDropdownRow(
+                        title = stringResource(R.string.image_cache_capacity),
+                        summary = stringResource(R.string.image_cache_capacity_desc),
+                        values = listOf(100, 300, 500, 1000),
+                        selected = state.settings.imageCacheSizeMb,
+                        label = { "$it MB" },
+                        onSelect = viewModel::updateImageCacheSizeMb,
+                    )
                 }
             }}
 

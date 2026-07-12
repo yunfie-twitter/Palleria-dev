@@ -561,4 +561,14 @@
     <string name="viewer_page_mode">Paged</string>
     <string name="wallpaper_playlist">Wallpaper playlist</string>
     <string name="wallpaper_playlist_desc">Rotate wallpaper using offline-saved images</string>
+    <string name="image_manga_reader_mode">Multi-page reader</string>
+    <string name="image_manga_reader_mode_desc">Display artwork with horizontal pages or continuous vertical reading</string>
+    <string name="image_section_cache">Cache</string>
+    <string name="image_smart_cache">Smart cache</string>
+    <string name="image_smart_cache_desc">Preload upcoming feed artwork for faster viewing</string>
+    <string name="image_smart_cache_wifi">Wi-Fi only</string>
+    <string name="image_smart_cache_wifi_desc">Do not preload over mobile data</string>
+    <string name="image_smart_cache_count">Preloaded artworks</string>
+    <string name="image_cache_capacity">Image cache capacity</string>
+    <string name="image_cache_capacity_desc">Capacity changes apply after restarting the app</string>
 </resources>

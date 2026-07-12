@@ -96,6 +96,11 @@ internal fun readFromDataStore(
         illustDetailQuality = preferences[ILLUST_DETAIL_QUALITY] ?: "low",
         mangaDetailQuality = preferences[MANGA_DETAIL_QUALITY] ?: "low",
         fullscreenQuality = preferences[FULLSCREEN_QUALITY] ?: "high",
+        mangaReaderMode = preferences[MANGA_READER_MODE] ?: "paged",
+        smartCacheEnabled = preferences[SMART_CACHE_ENABLED] ?: false,
+        smartCacheWifiOnly = preferences[SMART_CACHE_WIFI_ONLY] ?: true,
+        smartCacheItemCount = preferences[SMART_CACHE_ITEM_COUNT] ?: 12,
+        imageCacheSizeMb = preferences[IMAGE_CACHE_SIZE_MB] ?: 300,
         startupScreen = preferences[STARTUP_SCREEN] ?: "home",
         userProfileBottomSheetEnabled = preferences[USER_PROFILE_BOTTOM_SHEET_ENABLED] ?: false,
         shortsFeedEnabled = preferences[SHORTS_FEED_ENABLED] ?: false,
@@ -280,6 +285,11 @@ internal fun writeToDataStore(preferences: MutablePreferences, settings: AppSett
     preferences[ILLUST_DETAIL_QUALITY] = settings.illustDetailQuality
     preferences[MANGA_DETAIL_QUALITY] = settings.mangaDetailQuality
     preferences[FULLSCREEN_QUALITY] = settings.fullscreenQuality
+    preferences[MANGA_READER_MODE] = settings.mangaReaderMode
+    preferences[SMART_CACHE_ENABLED] = settings.smartCacheEnabled
+    preferences[SMART_CACHE_WIFI_ONLY] = settings.smartCacheWifiOnly
+    preferences[SMART_CACHE_ITEM_COUNT] = settings.smartCacheItemCount
+    preferences[IMAGE_CACHE_SIZE_MB] = settings.imageCacheSizeMb
     preferences[STARTUP_SCREEN] = settings.startupScreen
     preferences[USER_PROFILE_BOTTOM_SHEET_ENABLED] = settings.userProfileBottomSheetEnabled
     preferences[SHORTS_FEED_ENABLED] = settings.shortsFeedEnabled

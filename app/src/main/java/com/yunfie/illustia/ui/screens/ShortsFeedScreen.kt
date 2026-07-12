@@ -104,7 +104,7 @@ fun ShortsFeedScreen(
                                     listOf(Color.Transparent, Color.Black.copy(alpha = 0.82f)),
                                 ),
                             )
-                            .padding(start = 20.dp, end = 20.dp, top = 72.dp, bottom = 24.dp),
+                            .padding(start = 20.dp, end = 92.dp, top = 72.dp, bottom = 24.dp),
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Text(
@@ -112,7 +112,8 @@ fun ShortsFeedScreen(
                                 color = Color.White,
                                 fontSize = 19.sp,
                                 fontWeight = FontWeight.Bold,
-                                maxLines = 2,
+                                maxLines = 3,
+                                softWrap = true,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -136,6 +137,7 @@ fun ShortsFeedScreen(
                         IconButton(
                             onClick = { viewModel.toggleBookmark(illust) },
                             modifier = Modifier.size(64.dp),
+                            backgroundColor = Color.Black.copy(alpha = 0.56f),
                         ) {
                             Icon(
                                 imageVector = if (illust.isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
@@ -147,6 +149,7 @@ fun ShortsFeedScreen(
                         IconButton(
                             onClick = { onOpenComments(illust.id) },
                             modifier = Modifier.size(64.dp),
+                            backgroundColor = Color.Black.copy(alpha = 0.56f),
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Messages,
@@ -164,6 +167,7 @@ fun ShortsFeedScreen(
                                 context.startActivity(Intent.createChooser(intent, shareLabel))
                             },
                             modifier = Modifier.size(64.dp),
+                            backgroundColor = Color.Black.copy(alpha = 0.56f),
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Share,

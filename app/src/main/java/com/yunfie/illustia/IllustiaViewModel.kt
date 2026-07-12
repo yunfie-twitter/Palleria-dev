@@ -42,6 +42,9 @@ import java.util.concurrent.TimeUnit
 import java.security.MessageDigest
 import java.security.SecureRandom
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import coil3.SingletonImageLoader
+import coil3.request.ImageRequest
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import java.io.IOException
@@ -751,6 +754,26 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         updateSettings { it.copy(fullscreenQuality = value) }
     }
 
+    fun updateMangaReaderMode(value: String) {
+        updateSettings { it.copy(mangaReaderMode = value) }
+    }
+
+    fun updateSmartCacheEnabled(value: Boolean) {
+        updateSettings { it.copy(smartCacheEnabled = value) }
+    }
+
+    fun updateSmartCacheWifiOnly(value: Boolean) {
+        updateSettings { it.copy(smartCacheWifiOnly = value) }
+    }
+
+    fun updateSmartCacheItemCount(value: Int) {
+        updateSettings { it.copy(smartCacheItemCount = value.coerceIn(4, 30)) }
+    }
+
+    fun updateImageCacheSizeMb(value: Int) {
+        updateSettings { it.copy(imageCacheSizeMb = value.coerceIn(100, 1000)) }
+    }
+
     fun updateWallpaperPlaylistEnabled(value: Boolean) {
         updateSettings { it.copy(wallpaperPlaylistEnabled = value) }
         com.yunfie.illustia.wallpaper.WallpaperPlaylistScheduler.setEnabled(getApplication(), value)
@@ -1235,6 +1258,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     shortsFeedFollowingNextUrl = followingPage.nextUrl,
                 )
             }
+            warmSmartCache(_uiState.value.shortsFeedItems)
         }
     }
 
@@ -1261,6 +1285,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     shortsFeedFollowingNextUrl = followingPage?.nextUrl,
                 )
             }
+            warmSmartCache(_uiState.value.shortsFeedItems.takeLast(_uiState.value.settings.smartCacheItemCount))
         }
     }
 
@@ -2555,6 +2580,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun rememberFeedItems(items: List<Illust>) {
         if (items.isEmpty()) return
+        warmSmartCache(items)
         val shownIds = items.map { it.id }
         updateSettings { settings ->
             settings.copy(
@@ -2563,6 +2589,30 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     .take(MAX_SEEN_FEED_ILLUSTS),
             )
         }
+    }
+
+    private fun warmSmartCache(items: List<Illust>) {
+        val settings = _uiState.value.settings
+        if (!settings.smartCacheEnabled) return
+        val context = getApplication<Application>().applicationContext
+        if (settings.smartCacheWifiOnly) {
+            val connectivity = context.getSystemService(ConnectivityManager::class.java)
+            val capabilities = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
+            if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) return
+        }
+        val loader = SingletonImageLoader.get(context)
+        items.asSequence()
+            .take(settings.smartCacheItemCount.coerceIn(4, 30))
+            .flatMap { illust ->
+                (illust.mediumImagePages.ifEmpty {
+                    listOf(illust.mediumImageUrl.ifBlank { illust.imageUrl })
+                }).asSequence()
+            }
+            .filter(String::isNotBlank)
+            .distinct()
+            .forEach { url ->
+                loader.enqueue(ImageRequest.Builder(context).data(url).build())
+            }
     }
 
     private fun AppSettings.resolveLoggedInAccount(): UserProfile? {

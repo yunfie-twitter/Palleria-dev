@@ -59,6 +59,7 @@ fun ImageViewerScreen(
     onMessage: (String) -> Unit,
     fullscreenQuality: String,
     prefetchImages: Boolean,
+    mangaReaderMode: String,
     onPageChanged: (Int) -> Unit,
 ) {
     val context = LocalContext.current
@@ -82,7 +83,7 @@ fun ImageViewerScreen(
     val coroutineScope = rememberCoroutineScope()
     var isZoomed by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
-    var comicMode by remember(illust.id) { mutableStateOf(illust.type == "manga" && imageUrls.size > 1) }
+    val comicMode = illust.type == "manga" && imageUrls.size > 1 && mangaReaderMode == "vertical"
     val swipePageThresholdPx = with(LocalDensity.current) { 72.dp.toPx() }
 
     LaunchedEffect(showControls) {
@@ -183,9 +184,6 @@ fun ImageViewerScreen(
                                     style = MiuixTheme.textStyles.title4,
                                 )
                             }
-                        }
-                        Button(onClick = { comicMode = !comicMode }) {
-                            Text(if (comicMode) stringResource(R.string.viewer_page_mode) else stringResource(R.string.viewer_comic_mode))
                         }
                         Box(
                             modifier = Modifier
