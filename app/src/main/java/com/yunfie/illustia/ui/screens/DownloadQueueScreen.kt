@@ -65,9 +65,15 @@ fun DownloadQueueScreen(
     PredictiveBackGestureHandler(onBack = onBack)
     val scrollBehavior = MiuixScrollBehavior()
     var selectedTab by remember { mutableIntStateOf(0) }
-    val allItems = state.downloadQueue.sortedByDescending { it.timestampMillis }
-    val downloadingItems = allItems.filter { it.status == DownloadQueueStatus.Waiting || it.status == DownloadQueueStatus.Downloading }
-    val completedItems = allItems.filter { it.status == DownloadQueueStatus.Completed }
+    val allItems = remember(state.downloadQueue) {
+        state.downloadQueue.sortedByDescending { it.timestampMillis }
+    }
+    val downloadingItems = remember(allItems) {
+        allItems.filter { it.status == DownloadQueueStatus.Waiting || it.status == DownloadQueueStatus.Downloading }
+    }
+    val completedItems = remember(allItems) {
+        allItems.filter { it.status == DownloadQueueStatus.Completed }
+    }
     val visibleItems = when (QueueTab.entries[selectedTab.coerceIn(0, QueueTab.entries.lastIndex)]) {
         QueueTab.All -> allItems
         QueueTab.Downloading -> downloadingItems

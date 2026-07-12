@@ -59,6 +59,11 @@ class SettingsStore(context: Context) {
 
     suspend fun write(settings: AppSettings) {
         writeAppSettingsImpl(dataStore, sensitivePreferences, database, dao, settings)
+        // Coil's singleton is created before DataStore/Room are available. Keep only the
+        // startup-critical, non-sensitive cache limit in a lightweight synchronous mirror.
+        legacyPreferences.edit()
+            .putInt(KEY_IMAGE_CACHE_SIZE_MB, settings.imageCacheSizeMb)
+            .apply()
     }
 
     suspend fun clearSensitive() {
@@ -197,5 +202,17 @@ class SettingsStore(context: Context) {
                 }
             }.getOrNull() ?: false
         }
+
+        fun readImageCacheSizeMbSync(context: Context): Int {
+            return context.applicationContext
+                .getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+                .getInt(KEY_IMAGE_CACHE_SIZE_MB, DEFAULT_IMAGE_CACHE_SIZE_MB)
+                .coerceIn(MIN_IMAGE_CACHE_SIZE_MB, MAX_IMAGE_CACHE_SIZE_MB)
+        }
+
+        private const val KEY_IMAGE_CACHE_SIZE_MB = "startup_image_cache_size_mb"
+        private const val DEFAULT_IMAGE_CACHE_SIZE_MB = 300
+        private const val MIN_IMAGE_CACHE_SIZE_MB = 100
+        private const val MAX_IMAGE_CACHE_SIZE_MB = 1000
     }
 }
