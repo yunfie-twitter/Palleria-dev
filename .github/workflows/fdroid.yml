@@ -20,6 +20,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,12 +48,11 @@ jobs:
       - name: Get Version Info
         id: version
         run: |
-          # Use grep and sed to extract versions directly from build.gradle for robustness
-          VERSION_NAME=$(grep "versionName" app/build.gradle | head -n 1 | awk -F'"' '{print $2}')
+          # build.gradleからversionNameとversionCodeを堅牢に抽出
+          VERSION_NAME=$(grep "versionName" app/build.gradle | head -n 1 | awk -F'"' '{print $2}' | sed "s/'//g")
           VERSION_CODE=$(grep "versionCode" app/build.gradle | head -n 1 | awk '{print $NF}')
           
           if [ -z "$VERSION_NAME" ]; then
-            # Fallback for different quoting styles
             VERSION_NAME=$(grep "versionName" app/build.gradle | head -n 1 | awk -F"'" '{print $2}')
           fi
           
@@ -96,7 +97,7 @@ jobs:
           fi
 
       - name: Build APKs
-        run: ./gradlew assemble
+        run: ./gradlew assembleRelease
         env:
           KEYSTORE_PATH: ../release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -113,11 +114,10 @@ jobs:
 
       - name: Update F-Droid Repository
         run: |
-          # Create a clean directory for the repository
           mkdir -p public/repo
           mkdir -p public/metadata
           
-          # 1. Fetch existing repository from gh-pages to keep multiple versions
+          # 1. gh-pages から既存の資産（過去のAPKやアイコン、メタデータ）をコピーして保持
           git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git old-repo || true
           if [ -d old-repo/repo ]; then
             echo "Copying existing APKs and icons..."
@@ -128,27 +128,21 @@ jobs:
             cp -r old-repo/metadata/. public/metadata/
           fi
           
-          # 2. Copy current metadata from source (may overwrite old ones)
+          # 2. ソースコード側の fdroid/metadata があればマージ
           if [ -d fdroid/metadata ]; then
             echo "Merging metadata from source..."
             cp -r fdroid/metadata/. public/metadata/
           fi
           
-          # 3. Copy new APKs built in this run
-          # They have unique names (Illustia-version-code.apk) so they won't overwrite
+          # 3. 今回ビルドされた新しいAPKをコピー
           cp app/build/outputs/apk/release/*.apk public/repo/
           
           cd public
-          # Create config.yml for fdroidserver
           cat <<EOF > config.yml
           repo_url: https://yunfi.f5.si/${{ github.event.repository.name }}/repo
           repo_name: Palleria Dev Repository
           repo_description: Development builds for Palleria
-          
-          # Keep all versions in the main repo instead of moving to archive
           archive_older: 0
-          
-          # KeyStore configuration for signing the repository index
           keystore: ../release.keystore
           keystorepass: "${{ secrets.RELEASE_KEYSTORE_PASSWORD }}"
           keypass: "${{ secrets.RELEASE_KEY_PASSWORD }}"
@@ -159,14 +153,8 @@ jobs:
           EOF
           chmod 600 config.yml
           
-          # Generate/Update the repository index
-          # --create-metadata will ensure we have basic metadata for new APKs
-          # index-v1.json will be automatically generated/updated
           fdroid update --create-metadata --pretty
           
-          # Optional: Also generate the old index.xml just in case, though index-v1.json is modern
-          # fdroid update --create-metadata --create-key
-
           rm config.yml
           cd ..
 
@@ -179,12 +167,12 @@ jobs:
           force_orphan: false
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        # タグの直接プッシュ、mainへのプッシュ（自動タグ生成後）のどちらでも確実に動くように条件を最適化
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
           files: |
             app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/debug/*.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
