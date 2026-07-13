@@ -114,10 +114,9 @@ internal fun AppNavHost(
                 onTokenLoginDismiss = { showTokenLoginSheet = false },
             )
         }
-        entry(
-            AppRoute.Detail,
+        entry<AppRoute.Detail>(
             metadata = artworkPageTransitionMetadata(),
-        ) {
+        ) { route ->
             appState.state.selectedIllust?.let { illust ->
                 IllustDetailScreen(
                     illust = illust,
@@ -168,7 +167,10 @@ internal fun AppNavHost(
                     confirmOnLongPressSave = appState.state.settings.confirmOnLongPressSave,
                     skipConfirmOnDetailSave = appState.state.settings.skipConfirmOnDetailSave,
                 )
-            }
+            } ?: Box(
+                modifier = Modifier.fillMaxSize().background(MiuixTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center,
+            ) { LoadingIndicator() }
         }
         entry(
             AppRoute.ImageViewer,
@@ -293,7 +295,7 @@ internal fun AppNavHost(
                 }
             }
         }
-        entry(AppRoute.UserProfile) {
+        entry<AppRoute.UserProfile> { route ->
             if (appState.state.selectedUser != null) {
                 val user = appState.state.selectedUser
                 UserProfileScreen(

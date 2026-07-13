@@ -52,7 +52,7 @@ internal sealed interface AppRoute : NavKey {
     data object Main : AppRoute
     data object Search : AppRoute
     data object Onboarding : AppRoute
-    data object Detail : AppRoute
+    data class Detail(val illustId: Long) : AppRoute
     data object ImageViewer : AppRoute
     data object NovelList : AppRoute
     data object NovelReader : AppRoute
@@ -73,7 +73,7 @@ internal sealed interface AppRoute : NavKey {
     data object About : AppRoute
     data object FavoriteTags : AppRoute
     data object WatchlistSeries : AppRoute
-    data object UserProfile : AppRoute
+    data class UserProfile(val userId: Long) : AppRoute
     data object AppLockSetup : AppRoute
     data object AppLockPinEntry : AppRoute
     data object PrivacyModeSettings : AppRoute

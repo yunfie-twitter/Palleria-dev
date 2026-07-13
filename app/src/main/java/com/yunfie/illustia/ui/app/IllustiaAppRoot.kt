@@ -122,7 +122,7 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
             return
         }
         when (backStack.removeAt(backStack.lastIndex)) {
-            AppRoute.Detail -> viewModel.closeIllust()
+            is AppRoute.Detail -> viewModel.closeIllust()
             AppRoute.ImageViewer -> viewModel.closeImageViewer()
             AppRoute.NovelList -> Unit
             AppRoute.NovelReader -> viewModel.closeNovel()
@@ -131,10 +131,14 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
                     selectedWatchlistSeriesIds.removeAt(selectedWatchlistSeriesIds.lastIndex)
                 }
             }
-            AppRoute.UserProfile -> {
+            is AppRoute.UserProfile -> {
                 viewModel.hideUserPage()
-                viewModel.restoreProfileReturnDetail()
             }
+            else -> Unit
+        }
+        when (val revealed = backStack.lastOrNull()) {
+            is AppRoute.Detail -> viewModel.openIllust(revealed.illustId)
+            is AppRoute.UserProfile -> viewModel.openUserPage(revealed.userId)
             else -> Unit
         }
     }
@@ -223,8 +227,8 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
 
     LaunchedEffect(state.selectedIllust?.id) {
         if (state.selectedIllust != null) {
-            navigate(AppRoute.Detail)
-        } else if (backStack.lastOrNull() == AppRoute.Detail) {
+            navigate(AppRoute.Detail(state.selectedIllust!!.id))
+        } else if (backStack.lastOrNull() is AppRoute.Detail) {
             backStack.removeAt(backStack.lastIndex)
         }
     }
@@ -247,20 +251,21 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
 
     LaunchedEffect(state.showUserPage, state.selectedUser?.id) {
         if (state.showUserPage) {
-            if (backStack.lastOrNull() != AppRoute.UserProfile) {
-                backStack.add(AppRoute.UserProfile)
+            val route = AppRoute.UserProfile(state.selectedUser?.id ?: return@LaunchedEffect)
+            if (backStack.lastOrNull() != route) {
+                backStack.add(route)
             }
-        } else if (backStack.lastOrNull() == AppRoute.UserProfile) {
+        } else if (backStack.lastOrNull() is AppRoute.UserProfile) {
             backStack.removeAt(backStack.lastIndex)
         }
     }
 
     LaunchedEffect(Unit) {
-        snapshotFlow { AppRoute.UserProfile in backStack }
+        snapshotFlow { backStack.any { it is AppRoute.UserProfile } }
             .collect { hasUserProfile ->
                 if (!hasUserProfile) {
                     delay(350)
-                    if (AppRoute.UserProfile !in backStack) {
+                    if (backStack.none { it is AppRoute.UserProfile }) {
                         viewModel.closeUserPage()
                     }
                 }
