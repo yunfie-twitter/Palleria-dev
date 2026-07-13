@@ -51,6 +51,7 @@ fun ViewHistoryScreen(
     var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    val gridState = rememberLazyGridState()
     val feedHighQuality = state.settings.highQualityImages && state.settings.feedPreviewQuality != "low"
     val showAiBadge = state.settings.showAiBadge
     val hasSelection = selectedIds.isNotEmpty()
@@ -69,6 +70,12 @@ fun ViewHistoryScreen(
     LaunchedEffect(visibleHistory) {
         val availableIds = visibleHistory.asSequence().map { it.id }.toSet()
         selectedIds = selectedIds.filterTo(mutableSetOf()) { it in availableIds }
+    }
+
+    LaunchedEffect(showSearch) {
+        if (showSearch) {
+            gridState.animateScrollToItem(0)
+        }
     }
 
     deleteTarget?.let { target ->
@@ -123,7 +130,7 @@ fun ViewHistoryScreen(
         },
     ) { scaffoldPadding ->
         LazyVerticalGrid(
-            state = rememberLazyGridState(),
+            state = gridState,
             columns = GridCells.Fixed(adaptiveIllustColumns(state.settings)),
             modifier = Modifier
                 .fillMaxSize()

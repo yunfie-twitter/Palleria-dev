@@ -161,7 +161,7 @@ fun IllustDetailScreen(
         }
     }
 
-    fun likeWithAnimation() {
+    fun likeFromDoubleTap() {
         showLikeAnimation = false
         showLikeAnimation = true
         performAppHapticFeedback(context, haptic, hapticMode)
@@ -184,7 +184,8 @@ fun IllustDetailScreen(
                         performAppHapticFeedback(context, haptic, hapticMode)
                         onBookmark()
                     } else {
-                        likeWithAnimation()
+                        performAppHapticFeedback(context, haptic, hapticMode)
+                        onBookmark()
                     }
                 },
                 shape = RoundedCornerShape(18.dp),
@@ -222,7 +223,7 @@ fun IllustDetailScreen(
                     pixivUrl = pixivUrl,
                     onBack = onBack,
                     onOpenImage = onOpenImage,
-                    onDoubleTapImage = ::likeWithAnimation,
+                    onDoubleTapImage = ::likeFromDoubleTap,
                     onSaveImage = { url, name, confirm -> requestSave(url, name, confirm) },
                     onSaveAllImages = onSaveAllImages,
                     onMuteIllust = onMuteIllust,

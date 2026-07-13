@@ -6,11 +6,14 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -24,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
@@ -40,6 +44,7 @@ import com.yunfie.illustia.models.UserProfile
 import com.yunfie.illustia.settings.AppSettings
 import com.yunfie.illustia.ui.components.*
 import top.yukonga.miuix.kmp.basic.*
+import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
@@ -73,6 +78,7 @@ internal fun UserProfilePagerContent(
     showProfileHeader: Boolean,
 ) {
     var showAvatarPreview by remember(user.id) { mutableStateOf(false) }
+    val tabListState = rememberLazyListState()
     if (showAvatarPreview) {
         Dialog(
             onDismissRequest = { showAvatarPreview = false },
@@ -103,35 +109,52 @@ internal fun UserProfilePagerContent(
     Column(modifier = modifier.background(backgroundColor)) {
         AnimatedVisibility(
             visible = showProfileHeader,
-            enter = expandVertically(tween(260), expandFrom = Alignment.Top) + fadeIn(tween(180)),
-            exit = shrinkVertically(tween(260), shrinkTowards = Alignment.Top) + fadeOut(tween(160)),
+            enter = expandVertically(
+                animationSpec = tween(320),
+                expandFrom = Alignment.Top,
+            ) + fadeIn(animationSpec = tween(220, delayMillis = 60)),
+            exit = shrinkVertically(
+                animationSpec = tween(280),
+                shrinkTowards = Alignment.Top,
+            ) + fadeOut(animationSpec = tween(180)),
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                UserProfileHeader(user)
-                UserProfileInfo(
-                    user = user,
-                    illustCount = illusts.size,
-                    selectedTab = pagerState.currentPage,
-                    onTabSelected = onTabSelected,
-                    onToggleFollow = onToggleFollow,
-                    isMuted = isMuted,
-                    onUnmuteUser = onUnmuteUser,
-                    followAnimationTrigger = followAnimationTrigger,
-                    backgroundColor = backgroundColor,
-                    showTabs = true,
-                    onAvatarClick = { showAvatarPreview = true },
-                )
-            }
+            UserProfileHeader(
+                user = user,
+                selectedTab = pagerState.currentPage,
+                onTabSelected = onTabSelected,
+                onToggleFollow = onToggleFollow,
+                isMuted = isMuted,
+                onUnmuteUser = onUnmuteUser,
+                followAnimationTrigger = followAnimationTrigger,
+                backgroundColor = backgroundColor,
+                onAvatarClick = { showAvatarPreview = true },
+                tabListState = tabListState,
+            )
         }
         AnimatedVisibility(
             visible = !showProfileHeader,
-            enter = expandVertically(tween(260), expandFrom = Alignment.Top),
-            exit = shrinkVertically(tween(220), shrinkTowards = Alignment.Top),
+            enter = expandVertically(
+                animationSpec = tween(280),
+                expandFrom = Alignment.Top,
+            ) + fadeIn(animationSpec = tween(200, delayMillis = 80)),
+            exit = shrinkVertically(
+                animationSpec = tween(220),
+                shrinkTowards = Alignment.Top,
+            ) + fadeOut(animationSpec = tween(140)),
         ) {
-            Spacer(Modifier.height(64.dp))
+            Column {
+                Spacer(
+                    Modifier
+                        .statusBarsPadding()
+                        .height(54.dp),
+                )
+                UserProfileTabs(
+                    selectedTab = pagerState.currentPage,
+                    onTabSelected = onTabSelected,
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    listState = tabListState,
+                )
+            }
         }
         HorizontalPager(
             state = pagerState,
@@ -155,20 +178,26 @@ internal fun UserProfilePagerContent(
 }
 
 @Composable
-private fun UserProfileHeader(user: UserProfile) {
-    Box(
-        modifier = Modifier
-            .layout { measurable, constraints ->
-                val padding = 14.dp.roundToPx()
-                val width = constraints.maxWidth + padding * 2
-                val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-                layout(constraints.maxWidth, placeable.height) { placeable.placeRelative(-padding, 0) }
-            }
-            .fillMaxWidth()
-            .height(180.dp)
-            .background(MiuixTheme.colorScheme.surfaceContainerHigh),
-    ) {
-        user.backgroundImageUrl?.let {
+private fun UserProfileHeader(
+    user: UserProfile,
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    onToggleFollow: () -> Unit,
+    isMuted: Boolean,
+    onUnmuteUser: () -> Unit,
+    followAnimationTrigger: Int,
+    backgroundColor: Color,
+    onAvatarClick: () -> Unit,
+    tabListState: LazyListState,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(236.dp)
+                .background(MiuixTheme.colorScheme.surfaceContainerHigh),
+        ) {
+            user.backgroundImageUrl?.let {
             PixivImage(
                 url = it,
                 contentDescription = null,
@@ -176,6 +205,19 @@ private fun UserProfileHeader(user: UserProfile) {
                 modifier = Modifier.fillMaxSize(),
             )
         }
+        }
+        UserProfileInfo(
+            user = user,
+            selectedTab = selectedTab,
+            onTabSelected = onTabSelected,
+            onToggleFollow = onToggleFollow,
+            isMuted = isMuted,
+            onUnmuteUser = onUnmuteUser,
+            followAnimationTrigger = followAnimationTrigger,
+            backgroundColor = backgroundColor,
+            onAvatarClick = onAvatarClick,
+            tabListState = tabListState,
+        )
     }
 }
 
@@ -234,20 +276,56 @@ internal fun UserProfileSmallTopAppBar(
     onBack: () -> Unit,
     onMuteUser: () -> Unit,
     onMessage: (String) -> Unit,
+    compact: Boolean,
 ) {
     val context = LocalContext.current
     val shareLabel = stringResource(R.string.detail_share)
     val shareFailedMessage = stringResource(R.string.error_share_failed)
     val shareTitle = user.name.ifBlank { "@${user.account}" }
     val profileUrl = remember(user.id) { "https://www.pixiv.net/users/${user.id}" }
-    SmallTopAppBar(
-        title = shareTitle,
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.action_close))
+    val barScrimColor by animateColorAsState(
+        targetValue = if (compact) MiuixTheme.colorScheme.background.copy(alpha = 0.76f) else Color.Transparent,
+        label = "profile-top-bar-color",
+    )
+    Box(Modifier.fillMaxWidth()) {
+        if (compact && user.backgroundImageUrl != null) {
+            PixivImage(
+                url = user.backgroundImageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .matchParentSize()
+                    .blur(24.dp),
+            )
+        }
+        Box(Modifier.matchParentSize().background(barScrimColor))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            HeaderOverlayIcon(
+                icon = MiuixIcons.Back,
+                onClick = onBack,
+                backgroundColor = if (compact) Color.Transparent else Color.White.copy(alpha = 0.92f),
+                contentColor = if (compact) MiuixTheme.colorScheme.onBackground else Color.Black,
+            )
+            if (compact) {
+                Text(
+                    text = shareTitle,
+                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                    color = MiuixTheme.colorScheme.onBackground,
+                    style = MiuixTheme.textStyles.title4,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
             }
-        },
-        actions = {
             WindowIconDropdownMenu(
                 entry = DropdownEntry(
                     items = listOf(
@@ -267,17 +345,24 @@ internal fun UserProfileSmallTopAppBar(
                         }),
                     ),
                 ),
+                backgroundColor = if (compact) Color.Transparent else Color.White.copy(alpha = 0.92f),
+                cornerRadius = 19.dp,
+                minWidth = 38.dp,
+                minHeight = 38.dp,
             ) {
-                Icon(MiuixIcons.More, contentDescription = stringResource(R.string.detail_more))
+                Icon(
+                    MiuixIcons.More,
+                    contentDescription = stringResource(R.string.detail_more),
+                    tint = if (compact) MiuixTheme.colorScheme.onBackground else Color.Black,
+                )
             }
-        },
-    )
+        }
+    }
 }
 
 @Composable
 private fun UserProfileInfo(
     user: UserProfile,
-    illustCount: Int,
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
     onToggleFollow: () -> Unit,
@@ -285,15 +370,18 @@ private fun UserProfileInfo(
     onUnmuteUser: () -> Unit,
     followAnimationTrigger: Int,
     backgroundColor: Color,
-    showTabs: Boolean,
     onAvatarClick: () -> Unit,
+    tabListState: LazyListState,
 ) {
-    Column(Modifier.fillMaxWidth().offset(y = (-40).dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 18.dp).offset(y = (-48).dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             AvatarImage(
-                user.profileImageUrl, user.name, 88.dp,
+                user.profileImageUrl, user.name, 104.dp,
                 Modifier
-                    .border(androidx.compose.foundation.BorderStroke(3.dp, backgroundColor), CircleShape)
+                    .border(androidx.compose.foundation.BorderStroke(4.dp, backgroundColor), CircleShape)
                     .miuixClickable(onClick = onAvatarClick),
             )
             Spacer(Modifier.weight(1f))
@@ -301,22 +389,44 @@ private fun UserProfileInfo(
                 if (isMuted) MutedUserPill() else FollowPill(user.isFollowed, followAnimationTrigger)
             }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(user.name.ifBlank { "@${user.account}" }, color = MiuixTheme.colorScheme.onBackground, style = MiuixTheme.textStyles.title2, fontWeight = FontWeight.Black)
-            Text(stringResource(R.string.data_items_count, illustCount) + " " + stringResource(R.string.user_tab_works), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontWeight = FontWeight.Bold, style = MiuixTheme.textStyles.body2)
-            if (user.comment.isNotBlank()) Text(user.comment, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.body2, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                user.name.ifBlank { "@${user.account}" },
+                color = MiuixTheme.colorScheme.onBackground,
+                style = MiuixTheme.textStyles.title1,
+                fontWeight = FontWeight.Black,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (user.account.isNotBlank()) {
+                Text(
+                    "@${user.account}",
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.body1,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (user.comment.isNotBlank()) Text(user.comment, color = MiuixTheme.colorScheme.onBackground, style = MiuixTheme.textStyles.body1, lineHeight = 22.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
-        if (showTabs) UserProfileTabs(selectedTab, onTabSelected, Modifier.offset(y = (-6).dp))
+        UserProfileTabs(selectedTab, onTabSelected, listState = tabListState)
     }
 }
 
 @Composable
-internal fun UserProfileTabs(selectedTab: Int, onTabSelected: (Int) -> Unit, modifier: Modifier = Modifier) {
+internal fun UserProfileTabs(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
+) {
+    val tabs = listOf(stringResource(R.string.user_tab_works), stringResource(R.string.user_tab_bookmarks), stringResource(R.string.user_tab_info))
     TabRowWithContour(
-        modifier = modifier,
-        tabs = listOf(stringResource(R.string.user_tab_works), stringResource(R.string.user_tab_bookmarks), stringResource(R.string.user_tab_info)),
+        modifier = modifier.fillMaxWidth(),
+        tabs = tabs,
         selectedTabIndex = selectedTab,
         onTabSelected = onTabSelected,
+        listState = listState,
     )
 }
 
@@ -347,11 +457,11 @@ private fun UserIllustGridPage(
 ) {
     LazyVerticalGrid(
         state = gridState,
-        columns = GridCells.Fixed(adaptiveIllustColumns(settings)),
+        columns = GridCells.Fixed(2),
         modifier = Modifier.fillMaxSize().background(backgroundColor),
-        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 96.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 96.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         items(illusts, key = { "${keyPrefix}_${it.id}" }, contentType = { "illust_card" }) { illust ->
             IllustCard(
