@@ -18,6 +18,16 @@ import com.yunfie.illustia.models.pixiv.UgoiraMetadataResponse
 import com.yunfie.illustia.models.pixiv.WatchlistMangaModel
 import com.yunfie.illustia.models.UserPreview
 import com.yunfie.illustia.models.UserProfile
+import com.yunfie.illustia.models.pixiv.CurrentUserProfile
+import com.yunfie.illustia.models.pixiv.AccountEditResult
+import com.yunfie.illustia.models.pixiv.RelatedUsersResult
+import com.yunfie.illustia.models.pixiv.SpotlightResult
+import com.yunfie.illustia.models.pixiv.TrendingTag
+import com.yunfie.illustia.models.pixiv.NotificationListResult
+import com.yunfie.illustia.models.pixiv.PixivStamp
+import com.yunfie.illustia.models.pixiv.UserProfileEdit
+import com.yunfie.illustia.models.pixiv.UserWorkspace
+import com.yunfie.illustia.models.pixiv.UserFollowDetail
 import com.yunfie.illustia.settings.AppSettings
 import com.yunfie.illustia.settings.SettingsStore
 
@@ -149,12 +159,12 @@ class IllustiaRepository(
         return withSessionRetry { session -> apiClient.nextIllustSeriesPage(session, nextUrl) }
     }
 
-    suspend fun illustComments(illustId: Long): CommentResponse {
-        return withSessionRetry { session -> apiClient.illustComments(session, illustId) }
+    suspend fun illustComments(illustId: Long, offset: Int? = null): CommentResponse {
+        return withSessionRetry { session -> apiClient.illustComments(session, illustId, offset) }
     }
 
-    suspend fun illustCommentReplies(commentId: Long): CommentResponse {
-        return withSessionRetry { session -> apiClient.illustCommentReplies(session, commentId) }
+    suspend fun illustCommentReplies(commentId: Long, offset: Int? = null): CommentResponse {
+        return withSessionRetry { session -> apiClient.illustCommentReplies(session, commentId, offset) }
     }
 
     suspend fun novelComments(novelId: Long): CommentResponse {
@@ -171,6 +181,24 @@ class IllustiaRepository(
 
     suspend fun addIllustComment(illustId: Long, comment: String, parentCommentId: Long? = null) {
         withSessionRetry { session -> apiClient.addIllustComment(session, illustId, comment, parentCommentId) }
+    }
+
+    suspend fun addIllustStampComment(illustId: Long, stampId: Long, parentCommentId: Long? = null) {
+        withSessionRetry { session ->
+            apiClient.addIllustStampComment(session, illustId, stampId, parentCommentId)
+        }
+    }
+
+    suspend fun deleteIllustComment(commentId: Long) {
+        withSessionRetry { session -> apiClient.deleteIllustComment(session, commentId) }
+    }
+
+    suspend fun isAiContentVisible(): Boolean {
+        return withSessionRetry { session -> apiClient.isAiContentVisible(session) }
+    }
+
+    suspend fun setAiContentVisible(visible: Boolean) {
+        withSessionRetry { session -> apiClient.setAiContentVisible(session, visible) }
     }
 
     suspend fun addNovelComment(novelId: Long, comment: String, parentCommentId: Long? = null) {
@@ -196,6 +224,74 @@ class IllustiaRepository(
     suspend fun userDetail(userId: Long): UserProfile {
         return withSessionRetry { session -> apiClient.userDetail(session, userId) }
     }
+
+    suspend fun userFollowDetail(userId: Long): UserFollowDetail {
+        return withSessionRetry { session -> apiClient.userFollowDetail(session, userId) }
+    }
+
+    suspend fun createWebSocket(url: String, headers: Map<String, String> = emptyMap()): PixivWebSocketClient {
+        return apiClient.createWebSocket(requireSession(), url, headers)
+    }
+
+    suspend fun currentUserProfile(): CurrentUserProfile {
+        return withSessionRetry { session -> apiClient.currentUserProfile(session) }
+    }
+
+    suspend fun relatedUsers(userId: Long): RelatedUsersResult {
+        return withSessionRetry { session -> apiClient.relatedUsers(session, userId) }
+    }
+
+    suspend fun nextRelatedUsersPage(nextUrl: String): RelatedUsersResult {
+        return withSessionRetry { session -> apiClient.nextRelatedUsersPage(session, nextUrl) }
+    }
+
+    suspend fun setUserWorkspace(workspace: UserWorkspace) {
+        withSessionRetry { session -> apiClient.setUserWorkspace(session, workspace) }
+    }
+
+    suspend fun setUserProfile(profile: UserProfileEdit): AccountEditResult {
+        return withSessionRetry { session -> apiClient.setUserProfile(session, profile) }
+    }
+
+    suspend fun trendingTagDetails(): List<TrendingTag> =
+        withSessionRetry { session -> apiClient.trendingTagDetails(session) }
+
+    suspend fun spotlightArticles(): SpotlightResult =
+        withSessionRetry { session -> apiClient.spotlightArticles(session) }
+
+    suspend fun nextSpotlightPage(nextUrl: String): SpotlightResult =
+        withSessionRetry { session -> apiClient.nextSpotlightPage(session, nextUrl) }
+
+    suspend fun reportIllust(illustId: Long, problemType: String? = null, message: String? = null) {
+        withSessionRetry { session -> apiClient.reportIllust(session, illustId, problemType, message) }
+    }
+
+    suspend fun addNovelBookmark(novelId: Long, restrict: Restrict) {
+        withSessionRetry { session -> apiClient.addNovelBookmark(session, novelId, restrict) }
+    }
+
+    suspend fun removeNovelBookmark(novelId: Long) {
+        withSessionRetry { session -> apiClient.removeNovelBookmark(session, novelId) }
+    }
+
+    suspend fun addNovelMarker(novelId: Long, page: Int) {
+        withSessionRetry { session -> apiClient.addNovelMarker(session, novelId, page) }
+    }
+
+    suspend fun removeNovelMarker(novelId: Long) {
+        withSessionRetry { session -> apiClient.removeNovelMarker(session, novelId) }
+    }
+
+    suspend fun notifications(): NotificationListResult =
+        withSessionRetry { session -> apiClient.notifications(session) }
+
+    suspend fun notificationViewMore(notificationId: Long): NotificationListResult =
+        withSessionRetry { session -> apiClient.notificationViewMore(session, notificationId) }
+
+    suspend fun nextNotificationPage(nextUrl: String): NotificationListResult =
+        withSessionRetry { session -> apiClient.nextNotificationPage(session, nextUrl) }
+
+    suspend fun stamps(): List<PixivStamp> = withSessionRetry { session -> apiClient.stamps(session) }
 
     suspend fun userIllusts(userId: Long): PageResult<Illust> {
         return withSessionRetry { session -> apiClient.userIllusts(session, userId) }

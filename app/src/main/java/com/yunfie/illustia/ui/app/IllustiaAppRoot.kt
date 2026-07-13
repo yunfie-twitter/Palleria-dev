@@ -205,6 +205,7 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
                     IllustiaNavigationRequest.AccountLoginMethod -> AppRoute.AccountLoginMethod
                     IllustiaNavigationRequest.DataSettings -> AppRoute.DataSettings
                     IllustiaNavigationRequest.ViewHistory -> AppRoute.ViewHistory
+                    IllustiaNavigationRequest.Notifications -> AppRoute.Notifications
                     IllustiaNavigationRequest.MuteSettings -> AppRoute.MuteSettings
                     IllustiaNavigationRequest.AppData -> AppRoute.AppData
                     IllustiaNavigationRequest.DownloadQueue -> AppRoute.DownloadQueue

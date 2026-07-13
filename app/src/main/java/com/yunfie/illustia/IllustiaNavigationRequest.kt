@@ -12,6 +12,7 @@ enum class IllustiaNavigationRequest {
     AccountLoginMethod,
     DataSettings,
     ViewHistory,
+    Notifications,
     MuteSettings,
     AppData,
     DownloadQueue,

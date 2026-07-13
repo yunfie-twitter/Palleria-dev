@@ -14,7 +14,21 @@ import com.yunfie.illustia.models.SearchTarget
 import com.yunfie.illustia.models.UserPreview
 import com.yunfie.illustia.models.UserProfile
 import com.yunfie.illustia.models.pixiv.CommentResponse
+import com.yunfie.illustia.models.pixiv.AccountEditResult
+import com.yunfie.illustia.models.pixiv.CurrentUserProfile
 import com.yunfie.illustia.models.pixiv.IllustSeriesWithIdModel
+import com.yunfie.illustia.models.pixiv.RelatedUsersResult
+import com.yunfie.illustia.models.pixiv.SpotlightArticle
+import com.yunfie.illustia.models.pixiv.SpotlightResult
+import com.yunfie.illustia.models.pixiv.TrendingTag
+import com.yunfie.illustia.models.pixiv.NotificationContent
+import com.yunfie.illustia.models.pixiv.NotificationListResult
+import com.yunfie.illustia.models.pixiv.NotificationViewMore
+import com.yunfie.illustia.models.pixiv.PixivNotification
+import com.yunfie.illustia.models.pixiv.PixivStamp
+import com.yunfie.illustia.models.pixiv.UserProfileEdit
+import com.yunfie.illustia.models.pixiv.UserWorkspace
+import com.yunfie.illustia.models.pixiv.UserFollowDetail
 import com.yunfie.illustia.models.pixiv.WatchlistMangaModel
 import com.yunfie.illustia.models.pixiv.UgoiraMetadataResponse
 import java.time.LocalDate
@@ -22,18 +36,21 @@ import java.time.format.DateTimeFormatter
 import java.util.regex.Pattern
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.FormBody
 import okhttp3.HttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class PixivApiClient(
     mode: NetworkMode = NetworkMode.Standard,
@@ -440,6 +457,7 @@ class PixivApiClient(
         restrict: Restrict,
         tags: List<String>? = null,
     ) {
+        require(tags == null || tags.size <= 10) { "ブックマークタグは10件まで指定できます。" }
         val form = FormBody.Builder()
             .add("illust_id", illustId.toString())
             .add("restrict", restrict.apiValue)
@@ -464,6 +482,101 @@ class PixivApiClient(
     }
 
     suspend fun trendingTags(session: PixivSession): List<String> {
+        return trendingTagDetails(session).map { it.tag }
+    }
+
+    suspend fun userFollowDetail(session: PixivSession, userId: Long): UserFollowDetail {
+        val body = Request.Builder()
+            .url(pixivApiUrl("v1/user/follow/detail", "user_id" to userId.toString()))
+            .pixivApiHeaders(session).get().build()
+            .let { httpClient.newCall(it).awaitBody() }
+        return withContext(Dispatchers.Default) {
+            val root = json.parseToJsonElement(body).jsonObject
+            UserFollowDetail(
+                isFollowed = root.boolean("is_followed") ?: root.boolean("is_follow") ?: false,
+                restrict = root.string("restrict"),
+            )
+        }
+    }
+
+    fun createWebSocket(
+        session: PixivSession,
+        url: String,
+        headers: Map<String, String> = emptyMap(),
+    ): PixivWebSocketClient = PixivWebSocketClient(httpClient, url, { session.accessToken }, headers)
+
+    suspend fun reportIllust(session: PixivSession, illustId: Long, problemType: String?, message: String?) {
+        val form = FormBody.Builder().add("illust_id", illustId.toString())
+        problemType?.let { form.add("type_of_problem", it) }
+        message?.let { form.add("message", it) }
+        postAuthedForm(session, "https://app-api.pixiv.net/v1/illust/report", form.build())
+    }
+
+    suspend fun addNovelBookmark(session: PixivSession, novelId: Long, restrict: Restrict) {
+        postAuthedForm(session, "https://app-api.pixiv.net/v2/novel/bookmark/add", FormBody.Builder()
+            .add("novel_id", novelId.toString()).add("restrict", restrict.apiValue).build())
+    }
+
+    suspend fun removeNovelBookmark(session: PixivSession, novelId: Long) {
+        postAuthedForm(session, "https://app-api.pixiv.net/v1/novel/bookmark/delete",
+            FormBody.Builder().add("novel_id", novelId.toString()).build())
+    }
+
+    suspend fun addNovelMarker(session: PixivSession, novelId: Long, page: Int) {
+        require(page >= 1) { "小説のしおりページは1以上で指定してください。" }
+        postAuthedForm(session, "https://app-api.pixiv.net/v1/novel/marker/add", FormBody.Builder()
+            .add("novel_id", novelId.toString()).add("page", page.toString()).build())
+    }
+
+    suspend fun removeNovelMarker(session: PixivSession, novelId: Long) {
+        postAuthedForm(session, "https://app-api.pixiv.net/v1/novel/marker/delete",
+            FormBody.Builder().add("novel_id", novelId.toString()).build())
+    }
+
+    suspend fun notifications(session: PixivSession): NotificationListResult =
+        getNotificationPage(session, pixivApiUrl("v1/notification/list"))
+
+    suspend fun notificationViewMore(session: PixivSession, notificationId: Long): NotificationListResult =
+        getNotificationPage(session, pixivApiUrl("v1/notification/view-more", "notification_id" to notificationId.toString()))
+
+    suspend fun nextNotificationPage(session: PixivSession, nextUrl: String): NotificationListResult =
+        getNotificationPage(session, nextUrl.toHttpUrl())
+
+    private suspend fun getNotificationPage(session: PixivSession, url: HttpUrl): NotificationListResult {
+        val body = Request.Builder().url(url).pixivApiHeaders(session).get().build()
+            .let { httpClient.newCall(it).awaitBody() }
+        return withContext(Dispatchers.Default) {
+            val root = json.parseToJsonElement(body).jsonObject
+            NotificationListResult(
+                notifications = root["notifications"].asArrayOrEmpty().mapNotNull { element ->
+                    val item = element.asObjectOrNull() ?: return@mapNotNull null
+                    val content = item["content"].asObjectOrNull()
+                    val viewMore = item["view_more"].asObjectOrNull()
+                    PixivNotification(
+                        id = item.long("id") ?: return@mapNotNull null,
+                        createdDatetime = item.string("created_datetime"), type = item.int("type") ?: 0,
+                        content = content?.let { NotificationContent(it.string("text"), it.string("left_icon"), it.string("left_image"), it.string("right_icon"), it.string("right_image")) },
+                        viewMore = viewMore?.let { NotificationViewMore(it.boolean("unread_exists") ?: false, it.string("title")) },
+                        targetUrl = item.string("target_url"), isRead = item.boolean("is_read") ?: true,
+                    )
+                },
+                nextUrl = root.string("next_url"),
+            )
+        }
+    }
+
+    suspend fun stamps(session: PixivSession): List<PixivStamp> {
+        val body = Request.Builder().url(pixivApiUrl("v1/stamps")).pixivApiHeaders(session).get().build()
+            .let { httpClient.newCall(it).awaitBody() }
+        return withContext(Dispatchers.Default) {
+            json.parseToJsonElement(body).jsonObject["stamps"].asArrayOrEmpty().mapNotNull { element ->
+                val stamp = element.asObjectOrNull() ?: return@mapNotNull null
+                PixivStamp(stamp.long("stamp_id") ?: return@mapNotNull null, stamp.string("stamp_url") ?: return@mapNotNull null)
+            }
+        }
+    }
+
+    suspend fun trendingTagDetails(session: PixivSession): List<TrendingTag> {
         val body = Request.Builder()
             .url(pixivApiUrl("v1/trending-tags/illust", "filter" to "for_android"))
             .pixivApiHeaders(session)
@@ -473,14 +586,51 @@ class PixivApiClient(
 
         return withContext(Dispatchers.Default) {
             val root = json.parseToJsonElement(body).jsonObject
-            root["trend_tags"].asArrayOrEmpty()
-                .mapNotNull { it.asObjectOrNull()?.string("tag") }
+            root["trend_tags"].asArrayOrEmpty().mapNotNull { element ->
+                val item = element.asObjectOrNull() ?: return@mapNotNull null
+                val tag = item.string("tag") ?: return@mapNotNull null
+                val illust = item["illust"].asObjectOrNull()
+                val images = illust?.get("image_urls").asObjectOrNull()
+                TrendingTag(tag, item.string("translated_name"), illust?.long("id"), images?.string("medium"))
+            }
         }
     }
 
-    suspend fun illustComments(session: PixivSession, illustId: Long): CommentResponse {
+    suspend fun spotlightArticles(session: PixivSession): SpotlightResult =
+        getSpotlightPage(session, pixivApiUrl("v1/spotlight/articles", "filter" to "for_android"))
+
+    suspend fun nextSpotlightPage(session: PixivSession, nextUrl: String): SpotlightResult =
+        getSpotlightPage(session, nextUrl.toHttpUrl())
+
+    private suspend fun getSpotlightPage(session: PixivSession, url: HttpUrl): SpotlightResult {
+        val body = Request.Builder().url(url).pixivApiHeaders(session).get().build()
+            .let { httpClient.newCall(it).awaitBody() }
+        return withContext(Dispatchers.Default) {
+            val root = json.parseToJsonElement(body).jsonObject
+            SpotlightResult(
+                articles = root["spotlight_articles"].asArrayOrEmpty().mapNotNull { element ->
+                    val item = element.asObjectOrNull() ?: return@mapNotNull null
+                    SpotlightArticle(
+                        item.long("id") ?: return@mapNotNull null,
+                        item.string("title").orEmpty(), item.string("pure_title").orEmpty(),
+                        item.string("thumbnail").orEmpty(), item.string("article_url").orEmpty(),
+                        item.string("publish_date").orEmpty(),
+                    )
+                },
+                nextUrl = root.string("next_url"),
+            )
+        }
+    }
+
+    suspend fun illustComments(session: PixivSession, illustId: Long, offset: Int? = null): CommentResponse {
         val body = Request.Builder()
-            .url(pixivApiUrl("v3/illust/comments", "illust_id" to illustId.toString()))
+            .url(
+                pixivApiUrl(
+                    "v3/illust/comments",
+                    "illust_id" to illustId.toString(),
+                    "offset" to offset?.toString(),
+                ),
+            )
             .pixivApiHeaders(session)
             .get()
             .build()
@@ -491,9 +641,15 @@ class PixivApiClient(
         }
     }
 
-    suspend fun illustCommentReplies(session: PixivSession, commentId: Long): CommentResponse {
+    suspend fun illustCommentReplies(session: PixivSession, commentId: Long, offset: Int? = null): CommentResponse {
         val body = Request.Builder()
-            .url(pixivApiUrl("v2/illust/comment/replies", "comment_id" to commentId.toString()))
+            .url(
+                pixivApiUrl(
+                    "v2/illust/comment/replies",
+                    "comment_id" to commentId.toString(),
+                    "offset" to offset?.toString(),
+                ),
+            )
             .pixivApiHeaders(session)
             .get()
             .build()
@@ -549,6 +705,147 @@ class PixivApiClient(
             .add("comment", comment)
         parentCommentId?.let { form.add("parent_comment_id", it.toString()) }
         postAuthedForm(session, "https://app-api.pixiv.net/v1/illust/comment/add", form.build())
+    }
+
+    suspend fun currentUserProfile(session: PixivSession): CurrentUserProfile {
+        val body = Request.Builder()
+            .url(pixivApiUrl("v1/user/me/state"))
+            .pixivApiHeaders(session)
+            .get()
+            .build()
+            .let { httpClient.newCall(it).awaitBody() }
+        return withContext(Dispatchers.Default) {
+            val profile = json.parseToJsonElement(body).jsonObject["profile"].asObjectOrNull()
+                ?: error("Pixiv profile response is missing profile.")
+            val images = profile["profile_image_urls"].asObjectOrNull()
+            CurrentUserProfile(
+                userId = profile.long("user_id") ?: error("Pixiv user ID is missing."),
+                pixivId = profile.string("pixiv_id").orEmpty(),
+                name = profile.string("name").orEmpty(),
+                profileImageUrl = images?.string("medium"),
+                isPremium = profile.boolean("is_premium") ?: false,
+                xRestrict = profile.int("x_restrict") ?: 0,
+            )
+        }
+    }
+
+    suspend fun relatedUsers(session: PixivSession, userId: Long): RelatedUsersResult {
+        return getRelatedUsersPage(
+            session,
+            pixivApiUrl("v1/user/related", "seed_user_id" to userId.toString(), "filter" to "for_android"),
+        )
+    }
+
+    suspend fun nextRelatedUsersPage(session: PixivSession, nextUrl: String): RelatedUsersResult {
+        return getRelatedUsersPage(session, nextUrl.toHttpUrl())
+    }
+
+    private suspend fun getRelatedUsersPage(session: PixivSession, url: HttpUrl): RelatedUsersResult {
+        val body = Request.Builder().url(url).pixivApiHeaders(session).get().build()
+            .let { httpClient.newCall(it).awaitBody() }
+        return withContext(Dispatchers.Default) {
+            val root = json.parseToJsonElement(body).jsonObject
+            RelatedUsersResult(
+                users = root["user_previews"].asArrayOrEmpty()
+                    .mapNotNull { it.asObjectOrNull()?.toUserPreviewOrNull() },
+                nextUrl = root.string("next_url"),
+            )
+        }
+    }
+
+    suspend fun setUserWorkspace(session: PixivSession, workspace: UserWorkspace) {
+        val form = FormBody.Builder()
+        mapOf(
+            "pc" to workspace.pc, "monitor" to workspace.monitor, "tool" to workspace.tool,
+            "scanner" to workspace.scanner, "tablet" to workspace.tablet, "mouse" to workspace.mouse,
+            "printer" to workspace.printer, "desktop" to workspace.desktop, "music" to workspace.music,
+            "desk" to workspace.desk, "chair" to workspace.chair, "comment" to workspace.comment,
+            "workspace_image_url" to workspace.workspaceImageUrl,
+        ).forEach { (key, value) -> value?.let { form.add(key, it) } }
+        postAuthedForm(session, "https://app-api.pixiv.net/v1/user/workspace/edit", form.build())
+    }
+
+    suspend fun setUserProfile(session: PixivSession, profile: UserProfileEdit): AccountEditResult {
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
+            .addFormDataPart("gender", profile.gender.lowercase())
+            .addFormDataPart("address", profile.address.toString())
+            .addFormDataPart("job", profile.job.toString())
+            .addFormDataPart("user_name", profile.userName)
+            .addFormDataPart("webpage", profile.webpage)
+            .addFormDataPart("twitter", profile.twitter)
+            .addFormDataPart("comment", profile.comment)
+            .addFormDataPart("birthday", profile.birthday)
+            .apply {
+                profile.country?.let { addFormDataPart("country", it) }
+                profile.avatarJpeg?.let {
+                    addFormDataPart("profile_image", "profile.jpeg", it.toRequestBody("image/jpeg".toMediaType()))
+                }
+            }
+            .build()
+        val responseBody = Request.Builder()
+            .url("https://app-api.pixiv.net/v1/user/profile/edit")
+            .pixivApiHeaders(session)
+            .post(body)
+            .build()
+            .let { httpClient.newCall(it).awaitBody() }
+        return withContext(Dispatchers.Default) {
+            val root = json.parseToJsonElement(responseBody).jsonObject
+            val result = root["body"].asObjectOrNull()
+            val validation = result?.get("validation_errors").asObjectOrNull()
+            AccountEditResult(
+                isSucceeded = result?.boolean("is_succeed") ?: !(root.boolean("error") ?: false),
+                message = root.string("message").orEmpty(),
+                validationErrors = validation?.mapValues { (_, value) ->
+                    value.jsonPrimitive.contentOrNull.orEmpty()
+                }.orEmpty(),
+            )
+        }
+    }
+
+    suspend fun addIllustStampComment(
+        session: PixivSession,
+        illustId: Long,
+        stampId: Long,
+        parentCommentId: Long? = null,
+    ) {
+        val form = FormBody.Builder()
+            .add("illust_id", illustId.toString())
+            .add("stamp_id", stampId.toString())
+        parentCommentId?.let { form.add("parent_comment_id", it.toString()) }
+        postAuthedForm(session, "https://app-api.pixiv.net/v1/illust/comment/add", form.build())
+    }
+
+    suspend fun deleteIllustComment(session: PixivSession, commentId: Long) {
+        postAuthedForm(
+            session,
+            "https://app-api.pixiv.net/v1/illust/comment/delete",
+            FormBody.Builder().add("comment_id", commentId.toString()).build(),
+        )
+    }
+
+    suspend fun isAiContentVisible(session: PixivSession): Boolean {
+        val body = Request.Builder()
+            .url(pixivApiUrl("v1/user/ai-show-settings"))
+            .pixivApiHeaders(session)
+            .get()
+            .build()
+            .let { httpClient.newCall(it).awaitBody() }
+        return withContext(Dispatchers.Default) {
+            json.parseToJsonElement(body).jsonObject.boolean("show_ai") ?: false
+        }
+    }
+
+    suspend fun setAiContentVisible(session: PixivSession, visible: Boolean) {
+        val body = Request.Builder()
+            .url("https://app-api.pixiv.net/v1/user/ai-show-settings/edit")
+            .pixivApiHeaders(session)
+            .post(FormBody.Builder().add("show_ai", visible.toString()).build())
+            .build()
+            .let { httpClient.newCall(it).awaitBody() }
+        val saved = withContext(Dispatchers.Default) {
+            json.parseToJsonElement(body).jsonObject.boolean("show_ai")
+        }
+        check(saved == visible) { "AI作品の表示設定を更新できませんでした。" }
     }
 
     suspend fun addNovelComment(session: PixivSession, novelId: Long, comment: String, parentCommentId: Long? = null) {

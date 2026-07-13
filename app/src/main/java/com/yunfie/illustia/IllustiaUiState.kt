@@ -9,6 +9,7 @@ import com.yunfie.illustia.models.NovelTextContent
 import com.yunfie.illustia.models.UserPreview
 import com.yunfie.illustia.models.UserProfile
 import com.yunfie.illustia.models.pixiv.Comment
+import com.yunfie.illustia.models.pixiv.PixivNotification
 import com.yunfie.illustia.settings.AppSettings
 import com.yunfie.illustia.settings.db.SavedIllustEntity
 
@@ -76,6 +77,10 @@ data class IllustiaUiState(
     val showReloginRequiredDialog: Boolean = false,
     val pendingBookmarkRemoval: Illust? = null,
     val activeDownloads: Int = 0,
+    val notifications: List<PixivNotification> = emptyList(),
+    val notificationNextUrl: String? = null,
+    val expandedNotifications: Map<Long, List<PixivNotification>> = emptyMap(),
+    val notificationsLoading: Boolean = false,
     val downloadQueue: List<DownloadQueueEntry> = emptyList(),
     val showAccountSwitcher: Boolean = false,
     val appLocked: Boolean = false,

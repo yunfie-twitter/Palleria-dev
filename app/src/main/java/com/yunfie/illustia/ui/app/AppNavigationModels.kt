@@ -64,6 +64,7 @@ internal sealed interface AppRoute : NavKey {
     data object AccountLoginMethod : AppRoute
     data object DataSettings : AppRoute
     data object ViewHistory : AppRoute
+    data object Notifications : AppRoute
     data object MuteSettings : AppRoute
     data object AppData : AppRoute
     data object DownloadQueue : AppRoute

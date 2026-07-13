@@ -44,6 +44,7 @@ import com.yunfie.illustia.ui.screens.ImageViewerScreen
 import com.yunfie.illustia.ui.screens.MuteSettingsScreen
 import com.yunfie.illustia.ui.screens.NovelReaderScreen
 import com.yunfie.illustia.ui.screens.NovelScreen
+import com.yunfie.illustia.ui.screens.NotificationScreen
 import com.yunfie.illustia.ui.screens.OfflineLibraryScreen
 import com.yunfie.illustia.ui.screens.OnboardingScreen
 import com.yunfie.illustia.ui.screens.PinSetupScreen
@@ -237,6 +238,9 @@ internal fun AppNavHost(
         }
         entry(AppRoute.ViewHistory) {
             ViewHistoryScreen(state = appState.state, viewModel = viewModel, onBack = onPopRoute)
+        }
+        entry(AppRoute.Notifications) {
+            NotificationScreen(state = appState.state, viewModel = viewModel, onBack = onPopRoute)
         }
         entry(AppRoute.MuteSettings) {
             MuteSettingsScreen(state = appState.state, viewModel = viewModel, onBack = onPopRoute)

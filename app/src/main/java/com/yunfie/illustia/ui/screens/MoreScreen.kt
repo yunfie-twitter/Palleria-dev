@@ -44,6 +44,7 @@ import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
 import top.yukonga.miuix.kmp.icon.extended.Filter
 import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.icon.extended.Messages
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Timer
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -117,6 +118,11 @@ private fun rememberQuickActions(
                 title = context.getString(R.string.more_view_history),
                 icon = MiuixIcons.Timer,
                 onClick = viewModel::openViewHistory,
+            ),
+            MoreAction(
+                title = context.getString(R.string.more_notifications),
+                icon = MiuixIcons.Messages,
+                onClick = viewModel::openNotifications,
             ),
             MoreAction(
                 title = context.getString(R.string.more_favorite_tags),
