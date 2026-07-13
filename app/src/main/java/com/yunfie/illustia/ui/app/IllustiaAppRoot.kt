@@ -245,7 +245,7 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
         }
     }
 
-    LaunchedEffect(state.showUserPage) {
+    LaunchedEffect(state.showUserPage, state.selectedUser?.id) {
         if (state.showUserPage) {
             if (backStack.lastOrNull() != AppRoute.UserProfile) {
                 backStack.add(AppRoute.UserProfile)

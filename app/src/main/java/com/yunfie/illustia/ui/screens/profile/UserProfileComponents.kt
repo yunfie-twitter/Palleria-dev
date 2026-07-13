@@ -393,7 +393,7 @@ private fun UserProfileInfo(
             Text(
                 user.name.ifBlank { "@${user.account}" },
                 color = MiuixTheme.colorScheme.onBackground,
-                style = MiuixTheme.textStyles.title1,
+                style = MiuixTheme.textStyles.title2,
                 fontWeight = FontWeight.Black,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -402,7 +402,7 @@ private fun UserProfileInfo(
                 Text(
                     "@${user.account}",
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    style = MiuixTheme.textStyles.body1,
+                    style = MiuixTheme.textStyles.body2,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
