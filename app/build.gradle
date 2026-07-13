@@ -69,9 +69,16 @@ def releaseKeystorePath = System.getenv("KEYSTORE_PATH")
 
 def rustCrateDir = rootProject.file("rust/pixiv-api")
 def rustTargetDir = rootProject.file("rust/target")
-def cargoExecutable = org.gradle.internal.os.OperatingSystem.current().isWindows()
+def hostOperatingSystem = org.gradle.internal.os.OperatingSystem.current()
+def cargoExecutable = hostOperatingSystem.isWindows()
     ? new File(System.getProperty("user.home"), ".cargo/bin/cargo.exe").absolutePath
     : "cargo"
+def uniffiHostLibraryName = hostOperatingSystem.isWindows()
+    ? "palleria_pixiv_api.dll"
+    : hostOperatingSystem.isMacOsX()
+        ? "libpalleria_pixiv_api.dylib"
+        : "libpalleria_pixiv_api.so"
+def uniffiHostLibrary = new File(rustTargetDir, "release/${uniffiHostLibraryName}")
 def uniffiKotlinDir = layout.buildDirectory.dir("generated/uniffi/kotlin")
 def uniffiJniDir = layout.buildDirectory.dir("generated/uniffi/jniLibs")
 def rustInputs = files(
@@ -85,14 +92,14 @@ tasks.register("buildUniFfiHost", Exec) {
     environment "CARGO_TARGET_DIR", rustTargetDir
     commandLine cargoExecutable, "build", "--release", "--lib"
     inputs.files(rustInputs)
-    outputs.file(new File(rustTargetDir, "release/palleria_pixiv_api.dll"))
+    outputs.file(uniffiHostLibrary)
 }
 
 tasks.register("generateUniFfiBindings", Exec) {
     workingDir rustCrateDir
     environment "CARGO_TARGET_DIR", rustTargetDir
     commandLine cargoExecutable, "run", "--release", "--bin", "uniffi-bindgen", "--", "generate",
-        "--library", new File(rustTargetDir, "release/palleria_pixiv_api.dll"),
+        "--library", uniffiHostLibrary,
         "--language", "kotlin", "--out-dir", uniffiKotlinDir.get().asFile, "--no-format"
     dependsOn "buildUniFfiHost"
     inputs.files(rustInputs, new File(rustCrateDir, "uniffi.toml"))
