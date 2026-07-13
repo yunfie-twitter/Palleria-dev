@@ -65,77 +65,15 @@ class PixivApiClient(
     suspend fun loginWithRefreshToken(refreshToken: String): PixivSession {
         val token = refreshToken.trim()
         require(token.isNotEmpty()) { "refresh token を入力してください。" }
-
-        val request = Request.Builder()
-            .url("https://oauth.secure.pixiv.net/auth/token")
-            .pixivOAuthHeaders()
-            .post(
-                FormBody.Builder()
-                    .add("client_id", PixivApiConfig.CLIENT_ID)
-                    .add("client_secret", PixivApiConfig.CLIENT_SECRET)
-                    .add("grant_type", "refresh_token")
-                    .add("include_policy", "true")
-                    .add("refresh_token", token)
-                    .build(),
-            )
-            .build()
-
-        val body = httpClient.newCall(request).awaitBody()
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            val response = root["response"].asObjectOrNull() ?: root
-            PixivSession(
-                accessToken = response.string("access_token") ?: error("Pixiv access token を取得できませんでした。"),
-                refreshToken = response.string("refresh_token") ?: token,
-                userId = response["user"].asObjectOrNull()?.long("id"),
-            )
-        }
+        return httpClient.loginWithRefreshToken(token)
     }
 
     suspend fun loginWithAuthorizationCode(code: String, codeVerifier: String): PixivSession {
-        val request = Request.Builder()
-            .url("https://oauth.secure.pixiv.net/auth/token")
-            .pixivOAuthHeaders()
-            .post(
-                FormBody.Builder()
-                    .add("client_id", PixivApiConfig.CLIENT_ID)
-                    .add("client_secret", PixivApiConfig.CLIENT_SECRET)
-                    .add("grant_type", "authorization_code")
-                    .add("include_policy", "true")
-                    .add("code", code)
-                    .add("code_verifier", codeVerifier)
-                    .add("redirect_uri", PixivApiConfig.REDIRECT_URI)
-                    .build(),
-            )
-            .build()
-
-        val body = httpClient.newCall(request).awaitBody()
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            val response = root["response"].asObjectOrNull() ?: root
-            PixivSession(
-                accessToken = response.string("access_token") ?: error("Pixiv access token を取得できませんでした。"),
-                refreshToken = response.string("refresh_token") ?: error("Pixiv refresh token を取得できませんでした。"),
-                userId = response["user"].asObjectOrNull()?.long("id"),
-            )
-        }
+        return httpClient.loginWithAuthorizationCode(code, codeVerifier)
     }
 
     fun createWebLoginUrl(createProvisionalAccount: Boolean = false, codeChallenge: String): String {
-        val path = if (createProvisionalAccount) {
-            "web/v1/provisional-accounts/create"
-        } else {
-            "web/v1/login"
-        }
-        return HttpUrl.Builder()
-            .scheme("https")
-            .host("app-api.pixiv.net")
-            .addPathSegments(path)
-            .addQueryParameter("code_challenge", codeChallenge)
-            .addQueryParameter("code_challenge_method", "S256")
-            .addQueryParameter("client", "pixiv-android")
-            .build()
-            .toString()
+        return httpClient.createWebLoginUrl(createProvisionalAccount, codeChallenge)
     }
 
     suspend fun recommended(session: PixivSession): PageResult<Illust> {

@@ -5,6 +5,8 @@ plugins {
     id "org.jetbrains.kotlin.plugin.compose"
 }
 
+ext.releaseKeystorePath = System.getenv("KEYSTORE_PATH")
+
 android {
     namespace "com.yunfie.illustia"
     compileSdk 37
@@ -17,11 +19,13 @@ android {
     }
 
     signingConfigs {
-        release {
-            storeFile file(System.getenv("KEYSTORE_PATH") ?: "debug.keystore")
-            storePassword System.getenv("KEYSTORE_PASSWORD")
-            keyAlias System.getenv("KEY_ALIAS")
-            keyPassword System.getenv("KEY_PASSWORD")
+        if (project.ext.releaseKeystorePath) {
+            release {
+                storeFile file(project.ext.releaseKeystorePath)
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
         }
     }
 
@@ -30,7 +34,7 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-            signingConfig signingConfigs.release
+            signingConfig project.ext.releaseKeystorePath ? signingConfigs.release : signingConfigs.debug
         }
     }
 
@@ -61,6 +65,8 @@ android {
     }
 }
 
+def releaseKeystorePath = System.getenv("KEYSTORE_PATH")
+
 def rustCrateDir = rootProject.file("rust/pixiv-api")
 def rustTargetDir = rootProject.file("rust/target")
 def cargoExecutable = org.gradle.internal.os.OperatingSystem.current().isWindows()
@@ -72,14 +78,14 @@ def uniffiJniDir = layout.buildDirectory.dir("generated/uniffi/jniLibs")
 tasks.register("buildUniFfiHost", Exec) {
     workingDir rustCrateDir
     environment "CARGO_TARGET_DIR", rustTargetDir
-    commandLine cargoExecutable, "build", "--lib"
+    commandLine cargoExecutable, "build", "--release", "--lib"
 }
 
 tasks.register("generateUniFfiBindings", Exec) {
     workingDir rustCrateDir
     environment "CARGO_TARGET_DIR", rustTargetDir
-    commandLine cargoExecutable, "run", "--bin", "uniffi-bindgen", "--", "generate",
-        "--library", new File(rustTargetDir, "debug/palleria_pixiv_api.dll"),
+    commandLine cargoExecutable, "run", "--release", "--bin", "uniffi-bindgen", "--", "generate",
+        "--library", new File(rustTargetDir, "release/palleria_pixiv_api.dll"),
         "--language", "kotlin", "--out-dir", uniffiKotlinDir.get().asFile, "--no-format"
     dependsOn "buildUniFfiHost"
 }

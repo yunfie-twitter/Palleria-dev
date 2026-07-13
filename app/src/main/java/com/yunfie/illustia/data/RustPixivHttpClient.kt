@@ -1,8 +1,11 @@
 package com.yunfie.illustia.data
 
+import android.os.Build
 import com.yunfie.illustia.models.NetworkMode
+import com.yunfie.illustia.models.PixivSession
 import com.yunfie.illustia.rust.ApiException
 import com.yunfie.illustia.rust.PixivHttpClient
+import com.yunfie.illustia.settings.currentAcceptLanguage
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,9 +15,33 @@ import okio.sink
 
 /** OkHttp request builder compatibility layer backed by the UniFFI Rust client. */
 internal class RustPixivHttpClient(mode: NetworkMode) {
-    private val native = PixivHttpClient(mode.code)
+    private val native = PixivHttpClient(
+        networkMode = mode.code,
+        userAgent = "PixivAndroidApp/${PixivApiConfig.APP_VERSION} (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})",
+        appOsVersion = "Android ${Build.VERSION.RELEASE}",
+        acceptLanguage = currentAcceptLanguage(),
+    )
 
     fun newCall(request: Request): RustPixivCall = RustPixivCall(native, request)
+
+    suspend fun loginWithRefreshToken(refreshToken: String): PixivSession = withContext(Dispatchers.IO) {
+        nativeCall {
+            native.loginWithRefreshToken(refreshToken).let {
+                PixivSession(it.accessToken, it.refreshToken, it.userId?.toLong())
+            }
+        }
+    }
+
+    suspend fun loginWithAuthorizationCode(code: String, codeVerifier: String): PixivSession = withContext(Dispatchers.IO) {
+        nativeCall {
+            native.loginWithAuthorizationCode(code, codeVerifier).let {
+                PixivSession(it.accessToken, it.refreshToken, it.userId?.toLong())
+            }
+        }
+    }
+
+    fun createWebLoginUrl(createProvisionalAccount: Boolean, codeChallenge: String): String =
+        native.createWebLoginUrl(createProvisionalAccount, codeChallenge)
 }
 
 internal class RustPixivCall(
@@ -31,7 +58,7 @@ internal class RustPixivCall(
         val headers = buildMap {
             request.headers.names().forEach { name -> put(name, request.headers.values(name).joinToString(", ")) }
         }
-        try {
+        nativeCall {
             native.execute(
                 method = request.method,
                 url = request.url.toString(),
@@ -39,15 +66,19 @@ internal class RustPixivCall(
                 body = sink.toByteArray(),
                 contentType = request.body?.contentType()?.toString(),
             ).body.toString(Charsets.UTF_8)
-        } catch (error: ApiException.Http) {
-            throw PixivApiException(error.status.toInt(), error.detail)
-        } catch (error: ApiException) {
-            val detail = when (error) {
-                is ApiException.InvalidRequest -> error.detail
-                is ApiException.Network -> error.detail
-                is ApiException.Http -> error.detail
-            }
-            throw PixivApiException(0, detail)
         }
     }
+}
+
+private inline fun <T> nativeCall(block: () -> T): T = try {
+    block()
+} catch (error: ApiException.Http) {
+    throw PixivApiException(error.status.toInt(), error.detail)
+} catch (error: ApiException) {
+    val detail = when (error) {
+        is ApiException.InvalidRequest -> error.detail
+        is ApiException.Network -> error.detail
+        is ApiException.Http -> error.detail
+    }
+    throw PixivApiException(0, detail)
 }
