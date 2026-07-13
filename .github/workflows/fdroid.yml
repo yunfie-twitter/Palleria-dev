@@ -38,6 +38,11 @@ jobs:
         with:
           gradle-version: 9.4.1
 
+      - name: Set up Rust Android toolchain
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+          cargo install cargo-ndk --locked
+
       - name: Decode Keystore
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
