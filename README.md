@@ -1,4 +1,4 @@
-# Palleria — Pixivイラスト専用ビューアー
+# Palleria
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Platform-Android%2013%2B-green.svg)](https://developer.android.com/)
