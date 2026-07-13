@@ -21,6 +21,6 @@ pixez/
 debug.keystore
 release.keystore
 mcp/
-.kotlin
+.kotlin/
 app/release/
-docs
+docs/
