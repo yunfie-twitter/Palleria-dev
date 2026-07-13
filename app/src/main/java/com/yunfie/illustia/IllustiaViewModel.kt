@@ -42,6 +42,9 @@ import java.util.concurrent.TimeUnit
 import java.security.MessageDigest
 import java.security.SecureRandom
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import coil3.SingletonImageLoader
+import coil3.request.ImageRequest
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import java.io.IOException
@@ -130,6 +133,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     private companion object {
         val RECOMMENDED_TAG_CACHE_TTL_MILLIS = TimeUnit.MINUTES.toMillis(30)
+        const val MAX_SEEN_FEED_ILLUSTS = 2_000
     }
 
     val bookmarkTimelineGridState = LazyGridState()
@@ -399,6 +403,14 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateUserProfileBottomSheetEnabled(value: Boolean) {
         updateSettings { it.copy(userProfileBottomSheetEnabled = value) }
+    }
+
+    fun updateShortsFeedEnabled(value: Boolean) {
+        updateSettings { it.copy(shortsFeedEnabled = value) }
+    }
+
+    fun updateDisableHorizontalSwipeInShortsFeed(value: Boolean) {
+        updateSettings { it.copy(disableHorizontalSwipeInShortsFeed = value) }
     }
 
     fun updateShowAiBadge(value: Boolean) {
@@ -742,6 +754,31 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         updateSettings { it.copy(fullscreenQuality = value) }
     }
 
+    fun updateMangaReaderMode(value: String) {
+        updateSettings { it.copy(mangaReaderMode = value) }
+    }
+
+    fun updateSmartCacheEnabled(value: Boolean) {
+        updateSettings { it.copy(smartCacheEnabled = value) }
+    }
+
+    fun updateSmartCacheWifiOnly(value: Boolean) {
+        updateSettings { it.copy(smartCacheWifiOnly = value) }
+    }
+
+    fun updateSmartCacheItemCount(value: Int) {
+        updateSettings { it.copy(smartCacheItemCount = value.coerceIn(4, 30)) }
+    }
+
+    fun updateImageCacheSizeMb(value: Int) {
+        updateSettings { it.copy(imageCacheSizeMb = value.coerceIn(100, 1000)) }
+    }
+
+    fun updateWallpaperPlaylistEnabled(value: Boolean) {
+        updateSettings { it.copy(wallpaperPlaylistEnabled = value) }
+        com.yunfie.illustia.wallpaper.WallpaperPlaylistScheduler.setEnabled(getApplication(), value)
+    }
+
     fun updateStartupScreen(value: String) {
         updateSettings { it.copy(startupScreen = value) }
     }
@@ -971,12 +1008,14 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         runLoading {
             val page = repository.nextPage(nextUrl)
             val settings = _uiState.value.settings
+            val additions = page.items.visibleWithSettings(settings).preferUnseenFeedItems(settings)
             _uiState.update {
                 it.copy(
-                    homeItems = it.homeItems.appendIllusts(page.items.visibleWithSettings(settings)),
+                    homeItems = it.homeItems.appendIllusts(additions),
                     homeNextUrl = page.nextUrl,
                 )
             }
+            rememberFeedItems(additions)
         }
     }
 
@@ -1203,6 +1242,50 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                     timelineNextUrl = page.nextUrl,
                 )
             }
+        }
+    }
+
+    fun refreshShortsFeed() {
+        runLoading {
+            val homePage = repository.loadHome(HomeFeedKind.Recommended)
+            val followingPage = repository.followingIllusts(_uiState.value.settings.bookmarkRestrict)
+            _uiState.update { state ->
+                val home = homePage.items.visibleWithSettings(state.settings)
+                val following = followingPage.items.visibleWithSettings(state.settings)
+                state.copy(
+                    shortsFeedItems = interleaveIllusts(home, following),
+                    shortsFeedHomeNextUrl = homePage.nextUrl,
+                    shortsFeedFollowingNextUrl = followingPage.nextUrl,
+                )
+            }
+            warmSmartCache(_uiState.value.shortsFeedItems)
+        }
+    }
+
+    fun updateShortsFeedCurrentIllust(illustId: Long) {
+        _uiState.update { it.copy(shortsFeedCurrentIllustId = illustId) }
+    }
+
+    fun loadMoreShortsFeed() {
+        val state = _uiState.value
+        val homeNextUrl = state.shortsFeedHomeNextUrl
+        val followingNextUrl = state.shortsFeedFollowingNextUrl
+        if (homeNextUrl == null && followingNextUrl == null) return
+        runLoading {
+            val homePage = homeNextUrl?.let { repository.nextPage(it) }
+            val followingPage = followingNextUrl?.let { repository.nextPage(it) }
+            _uiState.update { current ->
+                val additions = interleaveIllusts(
+                    homePage?.items.orEmpty().visibleWithSettings(current.settings),
+                    followingPage?.items.orEmpty().visibleWithSettings(current.settings),
+                )
+                current.copy(
+                    shortsFeedItems = current.shortsFeedItems.appendIllusts(additions),
+                    shortsFeedHomeNextUrl = homePage?.nextUrl,
+                    shortsFeedFollowingNextUrl = followingPage?.nextUrl,
+                )
+            }
+            warmSmartCache(_uiState.value.shortsFeedItems.takeLast(_uiState.value.settings.smartCacheItemCount))
         }
     }
 
@@ -1437,7 +1520,12 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openImageViewer(illust: Illust, startPage: Int = 0) {
-        _uiState.update { it.copy(imageViewerIllust = illust, imageViewerStartPage = startPage.coerceAtLeast(0)) }
+        val page = startPage.coerceAtLeast(0)
+        _uiState.update { it.copy(imageViewerIllust = illust, imageViewerStartPage = page, imageViewerCurrentPage = page) }
+    }
+
+    fun updateImageViewerPage(page: Int) {
+        _uiState.update { it.copy(imageViewerCurrentPage = page.coerceAtLeast(0)) }
     }
 
     suspend fun loadUgoiraPlayback(illustId: Long): UgoiraPlayback {
@@ -1490,7 +1578,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun closeImageViewer() {
-        _uiState.update { it.copy(imageViewerIllust = null, imageViewerStartPage = 0) }
+        _uiState.update { it.copy(imageViewerIllust = null, imageViewerStartPage = 0, imageViewerCurrentPage = 0) }
     }
 
     fun onIllustLongPress(illust: Illust) {
@@ -2472,7 +2560,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         val page = repository.loadHome(kind)
         val settings = _uiState.value.settings
         val items = withContext(Dispatchers.Default) {
-            page.items.visibleWithSettings(settings)
+            page.items.visibleWithSettings(settings).preferUnseenFeedItems(settings)
         }
         _uiState.update {
             it.copy(
@@ -2481,6 +2569,50 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 homeNextUrl = page.nextUrl,
             )
         }
+        rememberFeedItems(items)
+    }
+
+    private fun List<Illust>.preferUnseenFeedItems(settings: AppSettings): List<Illust> {
+        if (settings.seenFeedIllusts.isEmpty()) return this
+        val seen = settings.seenFeedIllusts.toHashSet()
+        return sortedBy { it.id in seen }
+    }
+
+    private fun rememberFeedItems(items: List<Illust>) {
+        if (items.isEmpty()) return
+        warmSmartCache(items)
+        val shownIds = items.map { it.id }
+        updateSettings { settings ->
+            settings.copy(
+                seenFeedIllusts = (shownIds + settings.seenFeedIllusts)
+                    .distinct()
+                    .take(MAX_SEEN_FEED_ILLUSTS),
+            )
+        }
+    }
+
+    private fun warmSmartCache(items: List<Illust>) {
+        val settings = _uiState.value.settings
+        if (!settings.smartCacheEnabled) return
+        val context = getApplication<Application>().applicationContext
+        if (settings.smartCacheWifiOnly) {
+            val connectivity = context.getSystemService(ConnectivityManager::class.java)
+            val capabilities = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
+            if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) return
+        }
+        val loader = SingletonImageLoader.get(context)
+        items.asSequence()
+            .take(settings.smartCacheItemCount.coerceIn(4, 30))
+            .flatMap { illust ->
+                (illust.mediumImagePages.ifEmpty {
+                    listOf(illust.mediumImageUrl.ifBlank { illust.imageUrl })
+                }).asSequence()
+            }
+            .filter(String::isNotBlank)
+            .distinct()
+            .forEach { url ->
+                loader.enqueue(ImageRequest.Builder(context).data(url).build())
+            }
     }
 
     private fun AppSettings.resolveLoggedInAccount(): UserProfile? {
@@ -2782,6 +2914,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 val newHome = state.homeItems.replaceIllustIfPresent(updated)
                 val newSearch = state.searchItems.replaceIllustIfPresent(updated)
                 val newTimeline = state.timelineItems.replaceIllustIfPresent(updated)
+                val newShortsFeed = state.shortsFeedItems.replaceIllustIfPresent(updated)
                 val newWatchlist = state.watchlistItems.replaceIllustIfPresent(updated)
                 val newRanking = state.rankingItems.replaceIllustIfPresent(updated)
                 val newRelated = state.relatedIllusts.replaceIllustIfPresent(updated)
@@ -2798,6 +2931,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                 if (newHome === state.homeItems &&
                     newSearch === state.searchItems &&
                     newTimeline === state.timelineItems &&
+                    newShortsFeed === state.shortsFeedItems &&
                     newWatchlist === state.watchlistItems &&
                     newRanking === state.rankingItems &&
                     newRelated === state.relatedIllusts &&
@@ -2813,6 +2947,7 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
                         homeItems = newHome,
                         searchItems = newSearch,
                         timelineItems = newTimeline,
+                        shortsFeedItems = newShortsFeed,
                         watchlistItems = newWatchlist,
                         rankingItems = newRanking,
                         relatedIllusts = newRelated,
@@ -2928,4 +3063,11 @@ class IllustiaViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
+
+private fun interleaveIllusts(first: List<Illust>, second: List<Illust>): List<Illust> = buildList {
+    repeat(maxOf(first.size, second.size)) { index ->
+        first.getOrNull(index)?.let(::add)
+        second.getOrNull(index)?.let(::add)
+    }
+}.distinctBy(Illust::id)
 

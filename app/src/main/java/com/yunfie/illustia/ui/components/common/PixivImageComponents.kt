@@ -6,6 +6,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -46,6 +47,7 @@ fun PixivImage(
     val effectiveUrl = remember(url, proxyBaseUrl) {
         proxyPixivImageUrl(url, proxyBaseUrl)
     }
+    val currentOnSuccess by rememberUpdatedState(onSuccess)
     val imageRequest = remember(effectiveUrl, thumbnail) {
         ImageRequest.Builder(context)
             .data(effectiveUrl)
@@ -56,7 +58,7 @@ fun PixivImage(
             .listener(
                 onSuccess = { _, result ->
                     runCatching {
-                        onSuccess?.invoke(result.image.toBitmap())
+                        currentOnSuccess?.invoke(result.image.toBitmap())
                     }
                 },
             )

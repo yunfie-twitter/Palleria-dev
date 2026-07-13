@@ -10,6 +10,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,6 +59,8 @@ fun ImageViewerScreen(
     onMessage: (String) -> Unit,
     fullscreenQuality: String,
     prefetchImages: Boolean,
+    mangaReaderMode: String,
+    onPageChanged: (Int) -> Unit,
 ) {
     val context = LocalContext.current
     val shareFailedMessage = stringResource(R.string.viewer_share_failed)
@@ -78,6 +83,7 @@ fun ImageViewerScreen(
     val coroutineScope = rememberCoroutineScope()
     var isZoomed by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
+    val comicMode = illust.type == "manga" && imageUrls.size > 1 && mangaReaderMode == "vertical"
     val swipePageThresholdPx = with(LocalDensity.current) { 72.dp.toPx() }
 
     LaunchedEffect(showControls) {
@@ -89,6 +95,7 @@ fun ImageViewerScreen(
 
     LaunchedEffect(pagerState.currentPage) {
         isZoomed = false
+        onPageChanged(pagerState.currentPage)
     }
     
     fun shareCurrentPage() {
@@ -225,7 +232,25 @@ fun ImageViewerScreen(
                 .fillMaxSize()
                 .background(Color.Black),
         ) {
-            HorizontalPager(
+            if (comicMode) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 72.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    itemsIndexed(imageUrls, key = { index, _ -> index }) { page, url ->
+                        PixivImage(
+                            url = url,
+                            contentDescription = "${illust.title} ${page + 1}",
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .clickable { showControls = !showControls },
+                        )
+                    }
+                }
+            } else HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
                 beyondViewportPageCount = if (prefetchImages) 1 else 0,

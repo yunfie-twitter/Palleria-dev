@@ -96,8 +96,15 @@ internal fun readFromDataStore(
         illustDetailQuality = preferences[ILLUST_DETAIL_QUALITY] ?: "low",
         mangaDetailQuality = preferences[MANGA_DETAIL_QUALITY] ?: "low",
         fullscreenQuality = preferences[FULLSCREEN_QUALITY] ?: "high",
+        mangaReaderMode = preferences[MANGA_READER_MODE] ?: "paged",
+        smartCacheEnabled = preferences[SMART_CACHE_ENABLED] ?: false,
+        smartCacheWifiOnly = preferences[SMART_CACHE_WIFI_ONLY] ?: true,
+        smartCacheItemCount = preferences[SMART_CACHE_ITEM_COUNT] ?: 12,
+        imageCacheSizeMb = preferences[IMAGE_CACHE_SIZE_MB] ?: 300,
         startupScreen = preferences[STARTUP_SCREEN] ?: "home",
         userProfileBottomSheetEnabled = preferences[USER_PROFILE_BOTTOM_SHEET_ENABLED] ?: false,
+        shortsFeedEnabled = preferences[SHORTS_FEED_ENABLED] ?: false,
+        disableHorizontalSwipeInShortsFeed = preferences[DISABLE_HORIZONTAL_SWIPE_IN_SHORTS_FEED] ?: false,
         verticalColumnCount = preferences[VERTICAL_COLUMN_COUNT] ?: 2,
         horizontalColumnCount = preferences[HORIZONTAL_COLUMN_COUNT] ?: 4,
         pixivNetworkMode = preferences[PIXIV_NETWORK_MODE] ?: "standard",
@@ -105,6 +112,8 @@ internal fun readFromDataStore(
         mutedIllusts = decodeLongList(preferences[MUTED_ILLUSTS_JSON]),
         mutedUsers = decodeLongList(preferences[MUTED_USERS_JSON]),
         mutedTags = decodeStringList(preferences[MUTED_TAGS_JSON]),
+        seenFeedIllusts = decodeLongList(preferences[SEEN_FEED_ILLUSTS_JSON]),
+        wallpaperPlaylistEnabled = preferences[WALLPAPER_PLAYLIST_ENABLED] ?: false,
         accounts = accounts,
         activeAccountIndex = preferences[ACTIVE_ACCOUNT_INDEX] ?: -1,
         privacyModeEnabled = preferences[PRIVACY_MODE_ENABLED] ?: false,
@@ -189,6 +198,8 @@ internal fun readFromSharedPreferences(preferences: SharedPreferences): AppSetti
         fullscreenQuality = preferences.getString("fullscreenQuality", "high") ?: "high",
         startupScreen = preferences.getString("startupScreen", "home") ?: "home",
         userProfileBottomSheetEnabled = preferences.getBoolean("userProfileBottomSheetEnabled", false),
+        shortsFeedEnabled = preferences.getBoolean("shortsFeedEnabled", false),
+        disableHorizontalSwipeInShortsFeed = preferences.getBoolean("disableHorizontalSwipeInShortsFeed", false),
         verticalColumnCount = preferences.getInt("verticalColumnCount", 2),
         horizontalColumnCount = preferences.getInt("horizontalColumnCount", 4),
         pixivNetworkMode = preferences.getString(KEY_PIXIV_NETWORK_MODE, "standard") ?: "standard",
@@ -196,6 +207,7 @@ internal fun readFromSharedPreferences(preferences: SharedPreferences): AppSetti
         mutedIllusts = preferences.getString("mutedIllusts", "").orEmpty().split(",").mapNotNull { it.toLongOrNull() },
         mutedUsers = preferences.getString("mutedUsers", "").orEmpty().split(",").mapNotNull { it.toLongOrNull() },
         mutedTags = preferences.getString("mutedTags", "").orEmpty().split(",").filter { it.isNotBlank() },
+        seenFeedIllusts = preferences.getString("seenFeedIllusts", "").orEmpty().split(",").mapNotNull { it.toLongOrNull() },
         accounts = decodeAccounts(preferences.getString(KEY_ACCOUNTS, "").orEmpty()),
         activeAccountIndex = preferences.getInt(KEY_ACTIVE_ACCOUNT_INDEX, -1),
         privacyModeEnabled = false,
@@ -273,8 +285,15 @@ internal fun writeToDataStore(preferences: MutablePreferences, settings: AppSett
     preferences[ILLUST_DETAIL_QUALITY] = settings.illustDetailQuality
     preferences[MANGA_DETAIL_QUALITY] = settings.mangaDetailQuality
     preferences[FULLSCREEN_QUALITY] = settings.fullscreenQuality
+    preferences[MANGA_READER_MODE] = settings.mangaReaderMode
+    preferences[SMART_CACHE_ENABLED] = settings.smartCacheEnabled
+    preferences[SMART_CACHE_WIFI_ONLY] = settings.smartCacheWifiOnly
+    preferences[SMART_CACHE_ITEM_COUNT] = settings.smartCacheItemCount
+    preferences[IMAGE_CACHE_SIZE_MB] = settings.imageCacheSizeMb
     preferences[STARTUP_SCREEN] = settings.startupScreen
     preferences[USER_PROFILE_BOTTOM_SHEET_ENABLED] = settings.userProfileBottomSheetEnabled
+    preferences[SHORTS_FEED_ENABLED] = settings.shortsFeedEnabled
+    preferences[DISABLE_HORIZONTAL_SWIPE_IN_SHORTS_FEED] = settings.disableHorizontalSwipeInShortsFeed
     preferences[VERTICAL_COLUMN_COUNT] = settings.verticalColumnCount
     preferences[HORIZONTAL_COLUMN_COUNT] = settings.horizontalColumnCount
     preferences[PIXIV_NETWORK_MODE] = settings.pixivNetworkMode
@@ -282,6 +301,8 @@ internal fun writeToDataStore(preferences: MutablePreferences, settings: AppSett
     preferences[MUTED_ILLUSTS_JSON] = encodeLongList(settings.mutedIllusts)
     preferences[MUTED_USERS_JSON] = encodeLongList(settings.mutedUsers)
     preferences[MUTED_TAGS_JSON] = encodeStringList(settings.mutedTags)
+    preferences[SEEN_FEED_ILLUSTS_JSON] = encodeLongList(settings.seenFeedIllusts)
+    preferences[WALLPAPER_PLAYLIST_ENABLED] = settings.wallpaperPlaylistEnabled
     preferences[ACTIVE_ACCOUNT_INDEX] = settings.activeAccountIndex
     preferences[PRIVACY_MODE_ENABLED] = settings.privacyModeEnabled
     preferences[PRIVACY_MODE_AUTO_LOCK_TIMING] = settings.privacyModeAutoLockTiming

@@ -49,6 +49,7 @@ import com.yunfie.illustia.ui.screens.OnboardingScreen
 import com.yunfie.illustia.ui.screens.PinSetupScreen
 import com.yunfie.illustia.ui.screens.PrivacyModeSettingsScreen
 import com.yunfie.illustia.ui.screens.SavedIllustViewerScreen
+import com.yunfie.illustia.ui.screens.SearchScreen
 import com.yunfie.illustia.ui.screens.SettingsScreen
 import com.yunfie.illustia.ui.screens.UserProfileScreen
 import com.yunfie.illustia.ui.screens.ViewHistoryScreen
@@ -81,16 +82,26 @@ internal fun AppNavHost(
                 pagerState = pagerState,
                 onTabSelected = onTabSelected,
                 onSearch = {
-                    onTabSelected(SwipeTabs.indexOf(AppTab.Search), AppTab.Search)
+                    if (appState.settings.shortsFeedEnabled) {
+                        onNavigate(AppRoute.Search)
+                    } else {
+                        onTabSelected(mainTabs(false).indexOf(AppTab.Search), AppTab.Search)
+                    }
                 },
                 onOpenNovels = {
                     onNavigate(AppRoute.NovelList)
+                },
+                onOpenComments = { illustId ->
+                    onSelectedCommentTargetChange(illustId to CommentArtworkType.ILLUST)
                 },
                 onOpenWatchlistSeries = { seriesId ->
                     onSelectedWatchlistSeriesIdChange(seriesId)
                     onNavigate(AppRoute.IllustSeries)
                 },
             )
+        }
+        entry(AppRoute.Search) {
+            SearchScreen(state = appState.state, viewModel = viewModel)
         }
         entry(AppRoute.Onboarding) {
             var showTokenLoginSheet by remember { mutableStateOf(false) }
@@ -140,6 +151,7 @@ internal fun AppNavHost(
                     onMuteUser = { viewModel.muteUser(illust.artistId) },
                     onMuteTag = { tag -> viewModel.muteTag(tag) },
                     onOpenIllust = viewModel::openIllust,
+                    onLongPressIllust = viewModel::onIllustLongPress,
                     onOpenIllustById = viewModel::openIllust,
                     onSaveImage = viewModel::saveImage,
                     onSaveAllImages = viewModel::saveImages,
@@ -171,6 +183,8 @@ internal fun AppNavHost(
                     onMessage = viewModel::showMessage,
                     fullscreenQuality = appState.state.settings.fullscreenQuality,
                     prefetchImages = appState.state.settings.prefetchImages,
+                    mangaReaderMode = appState.state.settings.mangaReaderMode,
+                    onPageChanged = viewModel::updateImageViewerPage,
                 )
             }
         }
@@ -302,6 +316,7 @@ internal fun AppNavHost(
                     onLoadMoreBookmarks = viewModel::loadMoreSelectedUserBookmarks,
                     onToggleFollow = { viewModel.toggleFollow(user) },
                     onMuteUser = { viewModel.muteUser(user.id) },
+                    onMessage = viewModel::showMessage,
                     isMuted = appState.state.settings.mutedUsers.contains(user.id),
                     onUnmuteUser = { viewModel.unmuteUser(user.id) },
                     gridState = viewModel.userProfileGridState(user.id),

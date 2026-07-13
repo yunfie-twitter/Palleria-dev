@@ -154,7 +154,7 @@ internal fun ZoomablePixivImage(
                         triggered = false
                     },
                     onHorizontalDrag = { change, dragAmount ->
-                        if (scale <= 1.02f || triggered) return@detectHorizontalDragGestures
+                        if (triggered) return@detectHorizontalDragGestures
 
                         accumulatedX += dragAmount
 
