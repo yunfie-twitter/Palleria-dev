@@ -52,7 +52,7 @@
 ### F-Droid リポジトリからインストール
 
 1. 以下のページを開きます。  
-   👉 [https://yunfie-twitter.github.io/Illustia-dev/repo/](https://yunfie-twitter.github.io/Illustia-dev/repo/)
+   👉 [https://yunfi.f5.si/Palleria/repo/](https://yunfi.f5.si/Palleria/repo/)
 
 2. ページ内の手順に従い、F-Droidクライアントで「Palleria」を検索・インストールしてください。
 
