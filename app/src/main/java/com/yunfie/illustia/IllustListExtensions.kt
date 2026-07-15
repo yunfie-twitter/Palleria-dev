@@ -24,7 +24,12 @@ internal fun List<Illust>.appendIllusts(next: List<Illust>): List<Illust> {
     if (next.isEmpty()) return this
     val existingIds = HashSet<Long>(this.size + next.size)
     this.forEach { existingIds.add(it.id) }
-    return this + next.filter { existingIds.add(it.id) }
+    return buildList(this.size + next.size) {
+        addAll(this@appendIllusts)
+        next.forEach { illust ->
+            if (existingIds.add(illust.id)) add(illust)
+        }
+    }
 }
 
 internal fun IllustiaUiState.withSettings(settings: AppSettings): IllustiaUiState {

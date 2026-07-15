@@ -137,51 +137,52 @@ class MainActivity : FragmentActivity() {
         androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
 
         setContent {
-            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val settings by viewModel.settingsState.collectAsStateWithLifecycle()
+            val appLocked by viewModel.appLockedState.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
-            val themeColors = rememberAppThemeColors(state.settings)
+            val themeColors = rememberAppThemeColors(settings)
 
-            LaunchedEffect(state.settings.secureWindow) {
-                applySecureWindow(state.settings.secureWindow)
+            LaunchedEffect(settings.secureWindow) {
+                applySecureWindow(settings.secureWindow)
             }
 
             // Force FLAG_SECURE while locked so the app is obscured in recents
             // and screenshots are blocked, regardless of secureWindow setting.
             // Also clear the clipboard to prevent sensitive data leakage.
-            LaunchedEffect(state.appLocked, state.settings.secureWindow) {
-                if (state.appLocked && state.settings.appLockEnabled) {
+            LaunchedEffect(appLocked, settings.secureWindow, settings.appLockEnabled) {
+                if (appLocked && settings.appLockEnabled) {
                     window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                     clipboard?.clearPrimaryClip()
                 } else {
-                    applySecureWindow(state.settings.secureWindow)
+                    applySecureWindow(settings.secureWindow)
                 }
             }
 
-            LaunchedEffect(state.settings.appLanguage) {
-                applyAppLanguage(state.settings.appLanguage)
+            LaunchedEffect(settings.appLanguage) {
+                applyAppLanguage(settings.appLanguage)
             }
 
-            LaunchedEffect(state.settings.themeMode, systemDark) {
-                val isDarkTheme = isAppDarkTheme(state.settings.themeMode, systemDark)
+            LaunchedEffect(settings.themeMode, systemDark) {
+                val isDarkTheme = isAppDarkTheme(settings.themeMode, systemDark)
                 enableEdgeToEdge(
                     statusBarStyle = if (isDarkTheme) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
                     navigationBarStyle = if (isDarkTheme) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
                 )
             }
 
-            LaunchedEffect(state.settings.privacyModeEnabled, state.settings.hideRecents, state.settings.dummyAppName, state.settings.dummyIconVariant) {
-                updateRecentsTaskDescription(state)
+            LaunchedEffect(settings.privacyModeEnabled, settings.hideRecents, settings.dummyAppName, settings.dummyIconVariant) {
+                updateRecentsTaskDescription(settings)
             }
 
-            LaunchedEffect(state.settings.privacyModeEnabled, state.settings.dummyAppName, state.settings.dummyIconVariant) {
+            LaunchedEffect(settings.privacyModeEnabled, settings.dummyAppName, settings.dummyIconVariant) {
                 viewModel.applyDummyIconSettings(this@MainActivity)
             }
 
-            val fontFamily = remember(state.settings.appFont) {
-                resolveAppFontFamily(state.settings.appFont)
+            val fontFamily = remember(settings.appFont) {
+                resolveAppFontFamily(settings.appFont)
             }
-            val textStyles = remember(state.settings.appFont) {
+            val textStyles = remember(settings.appFont) {
                 resolveAppTextStyles(fontFamily)
             }
             MiuixTheme(colors = themeColors, textStyles = textStyles) {
@@ -310,17 +311,17 @@ class MainActivity : FragmentActivity() {
         appliedRefreshRateHint = null
     }
 
-    private fun updateRecentsTaskDescription(state: com.yunfie.illustia.IllustiaUiState) {
-        if (!state.settings.privacyModeEnabled) return
+    private fun updateRecentsTaskDescription(settings: com.yunfie.illustia.settings.AppSettings) {
+        if (!settings.privacyModeEnabled) return
 
-        val title = if (state.settings.hideRecents) {
-            state.settings.dummyAppName.ifBlank { getString(R.string.app_name) }
+        val title = if (settings.hideRecents) {
+            settings.dummyAppName.ifBlank { getString(R.string.app_name) }
         } else {
             getString(R.string.app_name)
         }
 
-        val iconRes = if (state.settings.hideRecents) {
-            resources.getIdentifier(state.settings.dummyIconVariant, "mipmap", packageName)
+        val iconRes = if (settings.hideRecents) {
+            resources.getIdentifier(settings.dummyIconVariant, "mipmap", packageName)
         } else {
             R.mipmap.ic_launcher
         }

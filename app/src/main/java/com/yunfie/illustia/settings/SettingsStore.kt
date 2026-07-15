@@ -14,7 +14,6 @@ import com.yunfie.illustia.settings.db.SettingsDao
 import com.yunfie.illustia.settings.db.SavedIllustEntity
 import com.yunfie.illustia.settings.db.SavedIllustPageEntity
 import com.yunfie.illustia.settings.db.SavedIllustWithPages
-import com.yunfie.illustia.settings.store.APP_LANGUAGE
 import com.yunfie.illustia.settings.store.DATASTORE_NAME
 import com.yunfie.illustia.settings.store.LEGACY_PREFS_NAME
 import com.yunfie.illustia.settings.store.PRIVACY_MODE_ENABLED
@@ -59,10 +58,11 @@ class SettingsStore(context: Context) {
 
     suspend fun write(settings: AppSettings) {
         writeAppSettingsImpl(dataStore, sensitivePreferences, database, dao, settings)
-        // Coil's singleton is created before DataStore/Room are available. Keep only the
-        // startup-critical, non-sensitive cache limit in a lightweight synchronous mirror.
+        // These non-sensitive values are needed before the asynchronous authoritative
+        // settings load completes. Keep a lightweight startup mirror off the DataStore path.
         legacyPreferences.edit()
             .putInt(KEY_IMAGE_CACHE_SIZE_MB, settings.imageCacheSizeMb)
+            .putString(KEY_APP_LANGUAGE, settings.appLanguage)
             .apply()
     }
 
@@ -179,13 +179,7 @@ class SettingsStore(context: Context) {
 
         fun readStoredAppLanguage(context: Context): String {
             val appContext = context.applicationContext
-            return runBlocking(Dispatchers.IO) {
-                dataStoreFor(appContext).data
-                    .catch { error ->
-                        if (error is java.io.IOException) emit(emptyPreferences()) else throw error
-                    }
-                    .first()[APP_LANGUAGE]
-            } ?: appContext.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+            return appContext.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(KEY_APP_LANGUAGE, "system")
             ?: "system"
         }

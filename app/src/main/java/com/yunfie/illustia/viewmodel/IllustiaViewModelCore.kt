@@ -140,6 +140,10 @@ open class IllustiaViewModelCore(
         .map { it.settings }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.settings)
+    val appLockedState: StateFlow<Boolean> = _uiState
+        .map { it.appLocked }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.appLocked)
     val homeItemsState: StateFlow<List<Illust>> = _uiState
         .map { it.homeItems }
         .distinctUntilChanged()
