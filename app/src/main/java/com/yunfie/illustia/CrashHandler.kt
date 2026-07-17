@@ -23,6 +23,7 @@ class CrashHandler : Thread.UncaughtExceptionHandler {
     }
 
     override fun uncaughtException(thread: Thread, ex: Throwable) {
+        if (ex.isCancellationFailure()) return
         if (!handleException(ex)) {
             defaultHandler?.uncaughtException(thread, ex)
             return

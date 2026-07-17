@@ -3,6 +3,9 @@ package com.yunfie.illustia.ui.app
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
 import com.yunfie.illustia.R
+import com.yunfie.illustia.models.Illust
+import com.yunfie.illustia.models.UserProfile
+import com.yunfie.illustia.models.pixiv.Comment
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
 import top.yukonga.miuix.kmp.icon.extended.More
@@ -81,3 +84,10 @@ internal sealed interface AppRoute : NavKey {
     data object IllustSeries : AppRoute
     data object Comments : AppRoute
 }
+
+internal data class DetailEntrySnapshot(
+    val illust: Illust,
+    val relatedIllusts: List<Illust>,
+    val firstComment: Comment?,
+    val user: UserProfile?,
+)

@@ -2736,15 +2736,7 @@ open class IllustiaViewModelCore(
     }
 
     private fun isCancellation(e: Throwable): Boolean {
-        var current: Throwable? = e
-        while (current != null) {
-            val name = current.javaClass.name
-            if (name.endsWith(".CancellationException") || name.contains("CancellationException")) {
-                return true
-            }
-            current = current.cause
-        }
-        return false
+        return e.isCancellationFailure()
     }
 
     private fun cleanErrorMessage(e: Throwable, fallback: String = str(R.string.error_generic)): String {

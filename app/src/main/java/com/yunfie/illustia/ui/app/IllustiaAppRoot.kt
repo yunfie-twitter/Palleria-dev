@@ -14,6 +14,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -66,6 +67,7 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
     val selectedWatchlistSeriesIds = remember { mutableStateListOf<Long>() }
     var selectedCommentTarget by remember { mutableStateOf<Pair<Long, CommentArtworkType>?>(null) }
     val backStack = remember { mutableStateListOf<NavKey>(AppRoute.Main) }
+    val detailSnapshots = remember { mutableStateMapOf<Long, DetailEntrySnapshot>() }
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(
         initialPage = initialPage,
         pageCount = { tabs.size },
@@ -121,8 +123,13 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
             selectedCommentTarget = null
             return
         }
-        when (backStack.removeAt(backStack.lastIndex)) {
-            is AppRoute.Detail -> viewModel.closeIllust()
+        when (val removed = backStack.removeAt(backStack.lastIndex)) {
+            is AppRoute.Detail -> {
+                if (backStack.none { it == removed }) {
+                    detailSnapshots.remove(removed.illustId)
+                }
+                viewModel.closeIllust()
+            }
             AppRoute.ImageViewer -> viewModel.closeImageViewer()
             is AppRoute.TagSearch -> viewModel.clearSearchResults()
             AppRoute.NovelList -> Unit
@@ -244,6 +251,22 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
         }
     }
 
+    LaunchedEffect(
+        state.selectedIllust,
+        state.relatedIllusts,
+        state.selectedIllustFirstComment,
+        state.selectedIllustUser,
+    ) {
+        state.selectedIllust?.let { illust ->
+            detailSnapshots[illust.id] = DetailEntrySnapshot(
+                illust = illust,
+                relatedIllusts = state.relatedIllusts,
+                firstComment = state.selectedIllustFirstComment,
+                user = state.selectedIllustUser,
+            )
+        }
+    }
+
     LaunchedEffect(state.imageViewerIllust?.id, state.imageViewerStartPage) {
         if (state.imageViewerIllust != null) {
             navigate(AppRoute.ImageViewer)
@@ -311,6 +334,7 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
                                 appState = appState,
                                 viewModel = viewModel,
                                 backStack = backStack,
+                                detailSnapshots = detailSnapshots,
                                 selectedTab = selectedTab,
                                 pagerState = pagerState,
                                 showTokenLogin = showTokenLogin,

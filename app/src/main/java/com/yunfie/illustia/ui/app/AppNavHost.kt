@@ -62,6 +62,7 @@ internal fun AppNavHost(
     appState: IllustiaAppStateBundle,
     viewModel: IllustiaViewModel,
     backStack: MutableList<NavKey>,
+    detailSnapshots: Map<Long, DetailEntrySnapshot>,
     selectedTab: AppTab,
     pagerState: androidx.compose.foundation.pager.PagerState,
     showTokenLogin: Boolean,
@@ -105,7 +106,9 @@ internal fun AppNavHost(
         entry(AppRoute.Search) {
             SearchScreen(state = appState.state, viewModel = viewModel)
         }
-        entry<AppRoute.TagSearch> {
+        entry<AppRoute.TagSearch>(
+            metadata = artworkPageTransitionMetadata(),
+        ) {
             SearchScreen(
                 state = appState.state,
                 viewModel = viewModel,
@@ -125,11 +128,23 @@ internal fun AppNavHost(
         entry<AppRoute.Detail>(
             metadata = artworkPageTransitionMetadata(),
         ) { route ->
-            appState.state.selectedIllust?.let { illust ->
-                IllustDetailScreen(
-                    illust = illust,
+            val selectedIllust = appState.state.selectedIllust
+            val snapshot = if (selectedIllust?.id == route.illustId) {
+                DetailEntrySnapshot(
+                    illust = selectedIllust,
                     relatedIllusts = appState.state.relatedIllusts,
                     firstComment = appState.state.selectedIllustFirstComment,
+                    user = appState.state.selectedIllustUser,
+                )
+            } else {
+                detailSnapshots[route.illustId]
+            }
+            snapshot?.let { detail ->
+                val illust = detail.illust
+                IllustDetailScreen(
+                    illust = illust,
+                    relatedIllusts = detail.relatedIllusts,
+                    firstComment = detail.firstComment,
                     onBack = onPopRoute,
                     onBookmark = { viewModel.toggleBookmark(illust) },
                     onOpenUser = viewModel::openUser,
@@ -144,11 +159,11 @@ internal fun AppNavHost(
                     },
                     onOpenImage = { page -> viewModel.openImageViewer(illust, page) },
                     onSearchTag = onSearchTag,
-                    isArtistFollowed = appState.state.selectedIllustUser?.isFollowed == true,
+                    isArtistFollowed = detail.user?.isFollowed == true,
                     isArtistMuted = appState.state.settings.mutedUsers.contains(illust.artistId),
                     isTagMuted = illust.isMutedByTags(appState.state.settings),
                     onToggleFollow = {
-                        appState.state.selectedIllustUser?.let { viewModel.toggleFollow(it) }
+                        detail.user?.let { viewModel.toggleFollow(it) }
                             ?: viewModel.openUser(illust.artistId)
                     },
                     onUnmuteUser = { viewModel.unmuteUser(illust.artistId) },
