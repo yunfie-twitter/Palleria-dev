@@ -124,12 +124,12 @@ fun SearchScreen(
         else -> "browse"
     }
 
-    if (isResultMode || searchExpanded) {
+    if ((isResultMode || searchExpanded) && onBackFromResults == null) {
         val closeSearch = {
             if (searchExpanded) {
                 searchExpanded = false
             } else {
-                onBackFromResults?.invoke() ?: viewModel.clearSearchResults()
+                viewModel.clearSearchResults()
             }
         }
         BackHandler(enabled = true, onBack = closeSearch)
