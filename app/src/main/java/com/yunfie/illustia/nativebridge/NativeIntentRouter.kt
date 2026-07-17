@@ -12,9 +12,14 @@ sealed interface NativeIntentEvent {
 
 object NativeIntentRouter {
     const val EXTRA_HANDOFF_URI = "com.yunfie.illustia.extra.HANDOFF_URI"
+    const val MAX_PROCESS_TEXT_CODE_POINTS = 256
 
     fun parse(intent: Intent?): NativeIntentEvent? {
         if (intent == null) return null
+        if (intent.action == Intent.ACTION_PROCESS_TEXT) {
+            return normalizeProcessText(intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT))
+                ?.let(NativeIntentEvent::Text)
+        }
         if (intent.action == Intent.ACTION_SEND) {
             val imageUri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
             if (imageUri != null) return NativeIntentEvent.Image(imageUri)
@@ -39,6 +44,32 @@ object NativeIntentRouter {
 
     fun parseText(value: String?): NativeIntentEvent? {
         return parseUri(value)
+    }
+
+    fun normalizeProcessText(value: CharSequence?): String? {
+        if (value == null) return null
+        val normalized = buildString(value.length.coerceAtMost(MAX_PROCESS_TEXT_CODE_POINTS)) {
+            var pendingSpace = false
+            value.forEach { char ->
+                when {
+                    char.isWhitespace() -> pendingSpace = isNotEmpty()
+                    char.isISOControl() -> Unit
+                    else -> {
+                        if (pendingSpace) append(' ')
+                        append(char)
+                        pendingSpace = false
+                    }
+                }
+            }
+        }.trim()
+            .removePrefix("#")
+            .trimStart()
+        if (normalized.isBlank()) return null
+
+        val codePointCount = normalized.codePointCount(0, normalized.length)
+        if (codePointCount <= MAX_PROCESS_TEXT_CODE_POINTS) return normalized
+        val endIndex = normalized.offsetByCodePoints(0, MAX_PROCESS_TEXT_CODE_POINTS)
+        return normalized.substring(0, endIndex).trimEnd()
     }
 
     private fun parseUri(value: String?): NativeIntentEvent? {

@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Palleria</string>
     <string name="app_name_dummy">電卓</string>
+    <string name="process_text_search">Palleriaで検索</string>
 
     <!-- Navigation -->
     <string name="nav_home">ホーム</string>

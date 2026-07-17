@@ -103,6 +103,7 @@ open class IllustiaViewModelCore(
     private var profileReturnDetail: DetailSnapshot? = null
     private var searchSnapshot: SearchSnapshot? = null
     private var userPageSnapshot: UserPageSnapshot? = null
+    private var pendingNativeIntentEvent: NativeIntentEvent? = null
 
     private companion object {
         val RECOMMENDED_TAG_CACHE_TTL_MILLIS = TimeUnit.MINUTES.toMillis(30)
@@ -226,6 +227,7 @@ open class IllustiaViewModelCore(
                     showLockRecoveryDialog = normalizedSettings.appLockFailCount >= 12,
                 )
             }
+            resumePendingNativeIntentIfReady()
             if (normalizedSettings.refreshToken.isNotBlank() && !shouldLock && !normalizedSettings.privacyModeEnabled) {
                 refreshCurrentAccountProfile(normalizedSettings)
                 if (normalizedSettings.startupScreen == "home") {
@@ -409,6 +411,7 @@ open class IllustiaViewModelCore(
     fun unlockApp(pin: String): Boolean {
         return if (settingsStore.verifyPin(pin)) {
             _uiState.update { it.copy(appLocked = false) }
+            resumePendingNativeIntentIfReady()
             viewModelScope.launch(Dispatchers.IO) {
                 val settings = _uiState.value.settings
                 if (settings.refreshToken.isNotBlank()) {
@@ -430,6 +433,7 @@ open class IllustiaViewModelCore(
 
     fun confirmUnlock() {
         _uiState.update { it.copy(appLocked = false) }
+        resumePendingNativeIntentIfReady()
         viewModelScope.launch(Dispatchers.IO) {
             val settings = _uiState.value.settings
             if (settings.refreshToken.isNotBlank()) {
@@ -443,6 +447,7 @@ open class IllustiaViewModelCore(
 
     fun unlockWithBiometric() {
         _uiState.update { it.copy(appLocked = false) }
+        resumePendingNativeIntentIfReady()
         viewModelScope.launch(Dispatchers.IO) {
             val settings = _uiState.value.settings
             if (settings.refreshToken.isNotBlank()) {
@@ -523,6 +528,7 @@ open class IllustiaViewModelCore(
         privacyUnlockJob?.cancel()
         privacyUnlockJob = viewModelScope.launch {
             _uiState.update { it.copy(privacyLocked = false, isTransitioningToIllustia = false, calculatorBuffer = "") }
+            resumePendingNativeIntentIfReady()
             val settings = _uiState.value.settings
             if (settings.refreshToken.isNotBlank() && _uiState.value.homeItems.isEmpty()) {
                 withContext(Dispatchers.IO) {
@@ -1128,31 +1134,48 @@ open class IllustiaViewModelCore(
                 return
             }
         }
-        // Block all other intent processing while locked to prevent deep-link bypass
-        if (_uiState.value.appLocked) return
+        val parsedEvent = NativeIntentRouter.parse(intent)
+        // Keep the request pending while either lock screen is active. It is dispatched only
+        // after authentication, so external intents cannot bypass app or privacy locks.
+        if (_uiState.value.appLocked || _uiState.value.privacyLocked) {
+            if (parsedEvent != null) pendingNativeIntentEvent = parsedEvent
+            return
+        }
         intent?.getStringExtra(com.yunfie.illustia.nativebridge.NativeIntentRouter.EXTRA_HANDOFF_URI)
             ?.takeIf(String::isNotBlank)
             ?.let(NativeIntentRouter::parseText)
             ?.let { event ->
-                when (event) {
-                    is NativeIntentEvent.Artwork -> openIllust(event.id)
-                    is NativeIntentEvent.User -> openUserPage(event.id)
-                    is NativeIntentEvent.Text -> submitSearch(event.value)
-                    is NativeIntentEvent.Image -> _uiState.update {
-                        it.copy(message = str(R.string.msg_shared_image_received))
-                    }
-                }
+                dispatchNativeIntentEvent(event)
                 return
             }
-        when (val event = NativeIntentRouter.parse(intent)) {
+        parsedEvent?.let(::dispatchNativeIntentEvent)
+    }
+
+    private fun dispatchNativeIntentEvent(event: NativeIntentEvent) {
+        val state = _uiState.value
+        if (
+            !state.settingsLoaded ||
+            state.appLocked ||
+            state.privacyLocked ||
+            (event is NativeIntentEvent.Text && state.settings.refreshToken.isBlank())
+        ) {
+            pendingNativeIntentEvent = event
+            return
+        }
+        pendingNativeIntentEvent = null
+        when (event) {
             is NativeIntentEvent.Artwork -> openIllust(event.id)
             is NativeIntentEvent.User -> openUserPage(event.id)
             is NativeIntentEvent.Text -> submitSearch(event.value)
             is NativeIntentEvent.Image -> _uiState.update {
                 it.copy(message = str(R.string.msg_shared_image_received))
             }
-            null -> Unit
         }
+    }
+
+    private fun resumePendingNativeIntentIfReady() {
+        val event = pendingNativeIntentEvent ?: return
+        dispatchNativeIntentEvent(event)
     }
 
     fun handleClipboardText(value: String) {
@@ -2636,6 +2659,7 @@ open class IllustiaViewModelCore(
                 message = message,
             )
         }
+        resumePendingNativeIntentIfReady()
         viewModelScope.launch(Dispatchers.IO) {
             refreshCurrentAccountProfile(nextSettings)
         }

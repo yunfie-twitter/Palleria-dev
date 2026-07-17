@@ -193,15 +193,22 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
     }
 
     LaunchedEffect(state.activeSearchWord) {
-        if (
-            backStack.lastOrNull() !is AppRoute.TagSearch &&
-            !settings.shortsFeedEnabled &&
-            state.activeSearchWord.isNotBlank() &&
-            selectedTab != AppTab.Search
-        ) {
-            selectedTab = AppTab.Search
-            val searchIndex = tabs.indexOf(AppTab.Search)
-            if (searchIndex >= 0) pagerState.scrollToPage(searchIndex)
+        if (state.activeSearchWord.isNotBlank()) {
+            if (settings.shortsFeedEnabled) {
+                if (
+                    backStack.lastOrNull() != AppRoute.Search &&
+                    backStack.lastOrNull() !is AppRoute.TagSearch
+                ) {
+                    navigate(AppRoute.Search)
+                }
+            } else if (
+                backStack.lastOrNull() !is AppRoute.TagSearch &&
+                selectedTab != AppTab.Search
+            ) {
+                selectedTab = AppTab.Search
+                val searchIndex = tabs.indexOf(AppTab.Search)
+                if (searchIndex >= 0) pagerState.scrollToPage(searchIndex)
+            }
         }
     }
 
