@@ -1,7 +1,7 @@
 package com.yunfie.illustia.wallpaper
 
 import com.yunfie.illustia.settings.AppSettings
-import com.yunfie.illustia.settings.db.SavedIllustEntity
+import com.yunfie.illustia.nativebridge.NativeSavedImage
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -11,8 +11,8 @@ class LiveWallpaperSelectionTest : FunSpec({
         val newer = saved(path = "newer", savedAt = 20)
         val settings = AppSettings(liveWallpaperOrder = "newest")
 
-        selectCandidate(listOf(older, newer), settings, "newer", true)?.localCoverPath shouldBe "older"
-        selectCandidate(listOf(older, newer), settings, "older", true)?.localCoverPath shouldBe "newer"
+        selectCandidate(listOf(older, newer), settings, "newer", true)?.uri shouldBe "older"
+        selectCandidate(listOf(older, newer), settings, "older", true)?.uri shouldBe "newer"
     }
 
     test("a single candidate remains selectable") {
@@ -22,16 +22,8 @@ class LiveWallpaperSelectionTest : FunSpec({
     }
 })
 
-private fun saved(path: String, savedAt: Long) = SavedIllustEntity().apply {
-    illustId = savedAt
-    title = path
-    artistName = "artist"
-    artistId = 1
-    thumbUrl = ""
-    localCoverPath = path
-    localPagePathsJson = "[]"
-    pageCount = 1
-    this.savedAt = savedAt
-    saveGroup = "artist"
-    xRestrict = 0
-}
+private fun saved(path: String, savedAt: Long) = NativeSavedImage(
+    uri = path,
+    name = path,
+    modifiedAtMillis = savedAt,
+)

@@ -2,7 +2,13 @@ package com.yunfie.illustia.data
 
 import android.os.Build
 import com.yunfie.illustia.models.NetworkMode
+import com.yunfie.illustia.models.Illust
+import com.yunfie.illustia.models.PageResult
 import com.yunfie.illustia.models.PixivSession
+import com.yunfie.illustia.models.pixiv.IllustSeries
+import com.yunfie.illustia.models.pixiv.UgoiraFrame
+import com.yunfie.illustia.models.pixiv.UgoiraPlayback
+import com.yunfie.illustia.models.pixiv.UgoiraPlaybackFrame
 import com.yunfie.illustia.rust.ApiException
 import com.yunfie.illustia.rust.PixivHttpClient
 import com.yunfie.illustia.settings.currentAcceptLanguage
@@ -42,6 +48,38 @@ internal class RustPixivHttpClient(mode: NetworkMode) {
 
     fun createWebLoginUrl(createProvisionalAccount: Boolean, codeChallenge: String): String =
         native.createWebLoginUrl(createProvisionalAccount, codeChallenge)
+
+    suspend fun prepareUgoira(
+        url: String,
+        cacheDir: String,
+        frames: List<UgoiraFrame>,
+    ): UgoiraPlayback = withContext(Dispatchers.IO) {
+        nativeCall {
+            native.prepareUgoira(
+                url = url,
+                headers = mapOf(
+                    "Referer" to "https://www.pixiv.net/",
+                    "User-Agent" to "PixivAndroidApp/6.184.0 (Android 14; Palleria)",
+                ),
+                cacheDir = cacheDir,
+                frames = frames.map {
+                    com.yunfie.illustia.rust.UgoiraFrame(
+                        file = it.file,
+                        delayMillis = it.delay,
+                    )
+                },
+            ).let { playback ->
+                UgoiraPlayback(
+                    frames = playback.frames.map {
+                        UgoiraPlaybackFrame(
+                            filePath = it.file,
+                            delayMillis = it.delayMillis,
+                        )
+                    },
+                )
+            }
+        }
+    }
 }
 
 internal class RustPixivCall(
@@ -49,6 +87,37 @@ internal class RustPixivCall(
     private val request: Request,
 ) {
     suspend fun awaitBody(): String = withContext(Dispatchers.IO) {
+        val nativeRequest = lowerRequest()
+        nativeCall {
+            native.execute(
+                method = nativeRequest.method,
+                url = nativeRequest.url,
+                headers = nativeRequest.headers,
+                body = nativeRequest.body,
+                contentType = nativeRequest.contentType,
+            ).body
+        }
+    }
+
+    suspend fun awaitIllustPage(): PageResult<Illust> = withContext(Dispatchers.IO) {
+        val nativeRequest = lowerRequest()
+        nativeCall {
+            native.executeIllustPage(
+                method = nativeRequest.method,
+                url = nativeRequest.url,
+                headers = nativeRequest.headers,
+                body = nativeRequest.body,
+                contentType = nativeRequest.contentType,
+            ).let { page ->
+                PageResult(
+                    items = page.items.map { it.toAppModel() },
+                    nextUrl = page.nextUrl,
+                )
+            }
+        }
+    }
+
+    private fun lowerRequest(): NativeRequest {
         val sink = ByteArrayOutputStream()
         request.body?.let { body ->
             val bufferedSink = sink.sink().buffer()
@@ -58,17 +127,45 @@ internal class RustPixivCall(
         val headers = buildMap {
             request.headers.names().forEach { name -> put(name, request.headers.values(name).joinToString(", ")) }
         }
-        nativeCall {
-            native.execute(
-                method = request.method,
-                url = request.url.toString(),
-                headers = headers,
-                body = sink.toByteArray(),
-                contentType = request.body?.contentType()?.toString(),
-            ).body
-        }
+        return NativeRequest(
+            method = request.method,
+            url = request.url.toString(),
+            headers = headers,
+            body = sink.toByteArray(),
+            contentType = request.body?.contentType()?.toString(),
+        )
     }
 }
+
+private data class NativeRequest(
+    val method: String,
+    val url: String,
+    val headers: Map<String, String>,
+    val body: ByteArray,
+    val contentType: String?,
+)
+
+private fun com.yunfie.illustia.rust.Illust.toAppModel(): Illust = Illust(
+    id = id,
+    title = title,
+    type = illustType,
+    caption = caption,
+    artistId = artistId,
+    artistName = artistName,
+    artistAvatarUrl = artistAvatarUrl,
+    squareImageUrl = squareImageUrl,
+    mediumImageUrl = mediumImageUrl,
+    imageUrl = imageUrl,
+    originalImageUrl = originalImageUrl,
+    mediumImagePages = mediumImagePages,
+    imagePages = imagePages,
+    originalImagePages = originalImagePages,
+    tags = tags,
+    pageCount = pageCount,
+    isBookmarked = isBookmarked,
+    totalComments = totalComments,
+    series = series?.let { IllustSeries(id = it.id, title = it.title) },
+)
 
 private inline fun <T> nativeCall(block: () -> T): T = try {
     block()

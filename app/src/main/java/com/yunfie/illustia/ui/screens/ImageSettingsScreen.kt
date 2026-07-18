@@ -58,14 +58,26 @@ fun ImageSettingsScreen(
     val context = LocalContext.current
     val imageStore = remember(context) { NativeImageStore(context.applicationContext) }
     var saveLocation by remember(imageStore) { mutableStateOf(imageStore.currentPathLabel()) }
-    var showLiveWallpaperFolderDialog by remember { mutableStateOf(false) }
-    var liveWallpaperFolderInput by remember(state.settings.liveWallpaperSourceFolder) {
-        mutableStateOf(state.settings.liveWallpaperSourceFolder)
-    }
+    val liveWallpaperSource = if (
+        state.settings.liveWallpaperSource == "folder" ||
+        state.settings.liveWallpaperSource == "selected_folder"
+    ) "selected_folder" else "saved_images"
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let {
             imageStore.persistTreeUri(it)
             saveLocation = imageStore.currentPathLabel()
+        }
+    }
+    val liveWallpaperFolderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            viewModel.updateLiveWallpaperSourceFolder(it.toString())
+            viewModel.updateLiveWallpaperSource("selected_folder")
         }
     }
     Scaffold(
@@ -254,26 +266,23 @@ fun ImageSettingsScreen(
                     DividerLine()
                     SettingDropdownRow(
                         title = stringResource(R.string.live_wallpaper_source),
-                        values = listOf("all", "folder"),
-                        selected = state.settings.liveWallpaperSource,
+                        values = listOf("saved_images", "selected_folder"),
+                        selected = liveWallpaperSource,
                         label = {
-                            if (it == "folder") stringResource(R.string.live_wallpaper_source_folder)
+                            if (it == "selected_folder") stringResource(R.string.live_wallpaper_source_folder)
                             else stringResource(R.string.live_wallpaper_source_all)
                         },
                         onSelect = viewModel::updateLiveWallpaperSource,
                     )
-                    if (state.settings.liveWallpaperSource == "folder") {
+                    if (liveWallpaperSource == "selected_folder") {
                         DividerLine()
                         ArrowPreference(
                             title = stringResource(R.string.live_wallpaper_folder_name),
-                            summary = state.settings.liveWallpaperSourceFolder.ifBlank {
-                                stringResource(R.string.live_wallpaper_folder_name_desc)
-                            },
+                            summary = imageStore
+                                .folderLabel(state.settings.liveWallpaperSourceFolder)
+                                .ifBlank { stringResource(R.string.live_wallpaper_folder_name_desc) },
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                liveWallpaperFolderInput = state.settings.liveWallpaperSourceFolder
-                                showLiveWallpaperFolderDialog = true
-                            },
+                            onClick = { liveWallpaperFolderPicker.launch(null) },
                         )
                     }
                     DividerLine()
@@ -427,45 +436,6 @@ fun ImageSettingsScreen(
         }
     }
 
-    if (showLiveWallpaperFolderDialog) {
-        OverlayDialog(
-            show = true,
-            title = stringResource(R.string.live_wallpaper_folder_name),
-            summary = stringResource(R.string.live_wallpaper_folder_name_desc),
-            onDismissRequest = { showLiveWallpaperFolderDialog = false },
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                TextField(
-                    value = liveWallpaperFolderInput,
-                    onValueChange = { liveWallpaperFolderInput = it.take(100) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Button(
-                        onClick = { showLiveWallpaperFolderDialog = false },
-                        modifier = Modifier.weight(1f),
-                        colors = overlayActionButtonColors(),
-                    ) {
-                        Text(stringResource(R.string.action_cancel))
-                    }
-                    Button(
-                        onClick = {
-                            viewModel.updateLiveWallpaperSourceFolder(liveWallpaperFolderInput)
-                            showLiveWallpaperFolderDialog = false
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = overlayActionButtonColors(),
-                    ) {
-                        Text(stringResource(R.string.action_save), fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-    }
 }
 
 @Composable

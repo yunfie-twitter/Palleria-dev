@@ -1,7 +1,11 @@
 mod oauth;
 
 use std::collections::HashMap;
+use std::fs::{self, File};
+use std::io::Write;
 use std::net::SocketAddr;
+use std::path::Path;
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use reqwest::blocking::Client;
@@ -10,7 +14,12 @@ use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 use crate::config::{ECH_HOSTS, ECH_IPS};
 use crate::error::{ApiError, http_error, network_error};
 use crate::headers::PixivHeaders;
-use crate::models::{ApiResponse, LoginSession};
+use crate::models::{
+    ApiResponse, IllustPage, IllustPageResponse, LoginSession, UgoiraFrame, UgoiraPlayback,
+};
+use crate::ugoira;
+
+static UGOIRA_DOWNLOAD_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 #[derive(uniffi::Object)]
 pub struct PixivHttpClient {
@@ -131,6 +140,87 @@ impl PixivHttpClient {
         }
         Ok(ApiResponse { status, body })
     }
+
+    pub fn execute_illust_page(
+        &self,
+        method: String,
+        url: String,
+        headers: HashMap<String, String>,
+        body: Vec<u8>,
+        content_type: Option<String>,
+    ) -> Result<IllustPage, ApiError> {
+        let response = self.execute(method, url, headers, body, content_type)?;
+        serde_json::from_str::<IllustPageResponse>(&response.body)
+            .map(IllustPageResponse::into_page)
+            .map_err(|error| ApiError::InvalidRequest {
+                detail: format!("invalid illust page response: {error}"),
+            })
+    }
+
+    pub fn prepare_ugoira(
+        &self,
+        url: String,
+        headers: HashMap<String, String>,
+        cache_dir: String,
+        frames: Vec<UgoiraFrame>,
+    ) -> Result<UgoiraPlayback, ApiError> {
+        let _guard = UGOIRA_DOWNLOAD_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .map_err(|_| ApiError::InvalidRequest {
+                detail: "ugoira download lock is poisoned".into(),
+            })?;
+        let cache_dir = Path::new(&cache_dir);
+        if let Some(playback) = ugoira::cached(cache_dir, &frames) {
+            return Ok(playback);
+        }
+
+        let mut header_map = HeaderMap::with_capacity(headers.len() + 9);
+        for (name, value) in headers {
+            let name = HeaderName::from_bytes(name.as_bytes()).map_err(|error| {
+                ApiError::InvalidRequest {
+                    detail: format!("invalid header name: {error}"),
+                }
+            })?;
+            let value =
+                HeaderValue::from_str(&value).map_err(|error| ApiError::InvalidRequest {
+                    detail: format!("invalid header value: {error}"),
+                })?;
+            header_map.append(name, value);
+        }
+
+        let mut response = self
+            .client
+            .get(&url)
+            .headers(self.headers.for_request(header_map)?)
+            .send()
+            .map_err(network_error)?;
+        let status = response.status().as_u16();
+        if !(200..300).contains(&status) {
+            let body = response.text().map_err(network_error)?;
+            return Err(http_error(status, &body));
+        }
+
+        let parent = cache_dir.parent().ok_or_else(|| ApiError::InvalidRequest {
+            detail: "ugoira cache directory has no parent".into(),
+        })?;
+        fs::create_dir_all(parent).map_err(file_error)?;
+        let zip_path = cache_dir.with_extension("zip.download");
+        let result = (|| {
+            let mut output = File::create(&zip_path).map_err(file_error)?;
+            response.copy_to(&mut output).map_err(network_error)?;
+            output.flush().map_err(file_error)?;
+            ugoira::prepare(&zip_path, cache_dir, frames)
+        })();
+        let _ = fs::remove_file(zip_path);
+        result
+    }
+}
+
+fn file_error(error: std::io::Error) -> ApiError {
+    ApiError::Network {
+        detail: error.to_string(),
+    }
 }
 
 #[cfg(test)]
@@ -188,5 +278,20 @@ mod tests {
             )
             .unwrap_err();
         assert!(matches!(error, ApiError::Http { status: 403, detail } if detail == "denied"));
+    }
+
+    #[test]
+    fn parses_illust_page_before_crossing_the_ffi_boundary() {
+        let response = client()
+            .execute_illust_page(
+                "GET".into(),
+                server(200, r#"{"illusts":[{"id":1}],"next_url":null}"#),
+                HashMap::new(),
+                vec![],
+                None,
+            )
+            .unwrap();
+        assert_eq!(response.items.len(), 1);
+        assert_eq!(response.items[0].id, 1);
     }
 }

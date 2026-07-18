@@ -575,10 +575,10 @@
     <string name="live_wallpaper_open_preview">Open live wallpaper preview</string>
     <string name="live_wallpaper_open_preview_desc">Set it on the home or lock screen from Android preview</string>
     <string name="live_wallpaper_source">Display source</string>
-    <string name="live_wallpaper_source_all">Entire offline library</string>
-    <string name="live_wallpaper_source_folder">Artist folder</string>
-    <string name="live_wallpaper_folder_name">Artist folder name</string>
-    <string name="live_wallpaper_folder_name_desc">Shows the folder matching the artist name used when saving</string>
+    <string name="live_wallpaper_source_all">Images saved by Palleria</string>
+    <string name="live_wallpaper_source_folder">Selected folder</string>
+    <string name="live_wallpaper_folder_name">Image folder</string>
+    <string name="live_wallpaper_folder_name_desc">Tap to choose an image folder</string>
     <string name="live_wallpaper_change_mode">Change artwork</string>
     <string name="live_wallpaper_change_screen">When the screen appears</string>
     <string name="live_wallpaper_change_home">When moving between home pages</string>

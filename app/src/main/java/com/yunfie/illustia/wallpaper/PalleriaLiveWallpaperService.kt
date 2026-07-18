@@ -15,10 +15,12 @@ import android.service.wallpaper.WallpaperService
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import androidx.core.content.ContextCompat
+import com.yunfie.illustia.data.NativeImageAnalysis
+import com.yunfie.illustia.nativebridge.NativeImageStore
+import com.yunfie.illustia.nativebridge.NativeSavedImage
 import com.yunfie.illustia.settings.AppSettings
 import com.yunfie.illustia.settings.SettingsStore
-import com.yunfie.illustia.settings.db.SavedIllustEntity
-import java.io.File
+import android.net.Uri
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.CoroutineScope
@@ -151,13 +153,17 @@ class PalleriaLiveWallpaperService : WallpaperService() {
                     if (settings.privacyModeEnabled) {
                         return@withContext WallpaperLoadResult(settings, null, null)
                     }
-                    val candidates = wallpaperCandidates(store.getSavedIllusts(), settings)
+                    val imageStore = NativeImageStore(applicationContext)
+                    val selectedFolder = settings.liveWallpaperSourceFolder
+                        .takeIf {
+                            settings.liveWallpaperSource == "selected_folder" ||
+                                settings.liveWallpaperSource == "folder"
+                        }
+                    val candidates = imageStore.listSavedImages(selectedFolder)
                     val selected = selectCandidate(candidates, settings, currentPath, forceDifferent)
-                    val bitmap = selected?.localCoverPath
-                        ?.let(::File)
-                        ?.takeIf { it.isFile && it.canRead() }
-                        ?.let { decodeSampledBitmap(it, surfaceWidth, surfaceHeight) }
-                    WallpaperLoadResult(settings, selected?.localCoverPath, bitmap)
+                    val bitmap = selected?.uri
+                        ?.let { decodeSampledBitmap(applicationContext, it, surfaceWidth, surfaceHeight) }
+                    WallpaperLoadResult(settings, selected?.uri, bitmap)
                 }
 
                 if (!visible) {
@@ -254,7 +260,7 @@ class PalleriaLiveWallpaperService : WallpaperService() {
         private fun drawBackground(canvas: Canvas, bitmap: Bitmap, settings: AppSettings) {
             when (settings.liveWallpaperBackground) {
                 "white" -> canvas.drawColor(Color.WHITE)
-                "dominant" -> canvas.drawColor(dominantColor(bitmap))
+                "dominant" -> canvas.drawColor(NativeImageAnalysis.dominantColor(bitmap))
                 "blur" -> {
                     canvas.drawColor(Color.BLACK)
                     val blurredWidth = 24
@@ -309,63 +315,50 @@ internal data class WallpaperLoadResult(
     val bitmap: Bitmap?,
 )
 
-internal fun wallpaperCandidates(
-    saved: List<SavedIllustEntity>,
-    settings: AppSettings,
-): List<SavedIllustEntity> {
-    return saved.asSequence()
-        .filter { !settings.liveWallpaperExcludeSensitive || it.xRestrict == 0 }
-        .filter {
-            settings.liveWallpaperSource != "folder" ||
-                settings.liveWallpaperSourceFolder.isBlank() ||
-                it.saveGroup.equals(settings.liveWallpaperSourceFolder, ignoreCase = true)
-        }
-        .filter { it.localCoverPath?.let(::File)?.isFile == true }
-        .toList()
-}
-
 internal fun selectCandidate(
-    candidates: List<SavedIllustEntity>,
+    candidates: List<NativeSavedImage>,
     settings: AppSettings,
     currentPath: String?,
     forceDifferent: Boolean,
-): SavedIllustEntity? {
+): NativeSavedImage? {
     if (candidates.isEmpty()) return null
     val ordered = when (settings.liveWallpaperOrder) {
-        "newest" -> candidates.sortedByDescending { it.savedAt }
-        "oldest" -> candidates.sortedBy { it.savedAt }
+        "newest" -> candidates.sortedByDescending { it.modifiedAtMillis }
+        "oldest" -> candidates.sortedBy { it.modifiedAtMillis }
         else -> candidates.shuffled()
     }
     if (!forceDifferent || ordered.size == 1) return ordered.first()
-    val currentIndex = ordered.indexOfFirst { it.localCoverPath == currentPath }
+    val currentIndex = ordered.indexOfFirst { it.uri == currentPath }
     return when {
-        settings.liveWallpaperOrder == "random" -> ordered.firstOrNull { it.localCoverPath != currentPath }
+        settings.liveWallpaperOrder == "random" -> ordered.firstOrNull { it.uri != currentPath }
         currentIndex < 0 -> ordered.first()
         else -> ordered[(currentIndex + 1) % ordered.size]
     }
 }
 
-private fun decodeSampledBitmap(file: File, width: Int, height: Int): Bitmap? {
+private fun decodeSampledBitmap(context: Context, uriValue: String, width: Int, height: Int): Bitmap? {
+    val uri = runCatching { Uri.parse(uriValue) }.getOrNull() ?: return null
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeFile(file.absolutePath, bounds)
+    runCatching {
+        context.contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, bounds)
+        }
+    }.getOrNull()
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
     var sample = 1
     while (bounds.outWidth / (sample * 2) >= width && bounds.outHeight / (sample * 2) >= height) {
         sample *= 2
     }
     return runCatching {
-        BitmapFactory.decodeFile(
-            file.absolutePath,
-            BitmapFactory.Options().apply {
-                inSampleSize = sample
-                inPreferredConfig = Bitmap.Config.ARGB_8888
-            },
-        )
+        context.contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(
+                it,
+                null,
+                BitmapFactory.Options().apply {
+                    inSampleSize = sample
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                },
+            )
+        }
     }.getOrNull()
-}
-
-private fun dominantColor(bitmap: Bitmap): Int {
-    val x = (bitmap.width / 2).coerceAtLeast(0)
-    val y = (bitmap.height / 2).coerceAtLeast(0)
-    return runCatching { bitmap.getPixel(x, y) }.getOrDefault(Color.BLACK)
 }

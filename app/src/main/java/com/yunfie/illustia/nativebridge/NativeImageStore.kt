@@ -99,6 +99,106 @@ class NativeImageStore(private val context: Context) {
         return listOf(root, path).filter { it.isNotBlank() }.joinToString(File.separator)
     }
 
+    fun listSavedImages(selectedFolderUri: String? = null): List<NativeSavedImage> {
+        return runCatching {
+            if (!selectedFolderUri.isNullOrBlank()) {
+                val root = DocumentFile.fromTreeUri(context, Uri.parse(selectedFolderUri))
+                root?.let(::listDocumentImages).orEmpty()
+            } else {
+                when (saveMode()) {
+                    SAVE_MODE_SAF -> writableTree()?.let(::listDocumentImages).orEmpty()
+                    SAVE_MODE_DIRECT -> listFileImages(baseDirectPath())
+                    else -> listMediaStoreImages()
+                }
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    fun folderLabel(uriValue: String): String {
+        val uri = runCatching { Uri.parse(uriValue) }.getOrNull() ?: return ""
+        return DocumentFile.fromTreeUri(context, uri)?.name
+            ?: runCatching { DocumentsContract.getTreeDocumentId(uri).substringAfterLast(':') }.getOrDefault("")
+    }
+
+    private fun listMediaStoreImages(): List<NativeSavedImage> {
+        val base = "${Environment.DIRECTORY_PICTURES}/Palleria/"
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.Images.Media.DATE_MODIFIED,
+        )
+        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
+        return context.contentResolver.query(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            arrayOf("$base%"),
+            "${MediaStore.Images.Media.DATE_MODIFIED} DESC",
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+            val modifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED)
+            buildList {
+                while (cursor.moveToNext()) {
+                    val uri = Uri.withAppendedPath(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        cursor.getLong(idColumn).toString(),
+                    )
+                    add(
+                        NativeSavedImage(
+                            uri = uri.toString(),
+                            name = cursor.getString(nameColumn).orEmpty(),
+                            modifiedAtMillis = cursor.getLong(modifiedColumn) * 1_000L,
+                        ),
+                    )
+                }
+            }
+        }.orEmpty()
+    }
+
+    private fun listDocumentImages(root: DocumentFile): List<NativeSavedImage> {
+        val result = mutableListOf<NativeSavedImage>()
+        val pending = ArrayDeque<DocumentFile>().apply { add(root) }
+        while (pending.isNotEmpty() && result.size < MAX_LISTED_IMAGES) {
+            val directory = pending.removeFirst()
+            directory.listFiles().forEach { item ->
+                when {
+                    item.isDirectory -> pending.addLast(item)
+                    item.isFile && item.isSupportedImage() -> result += NativeSavedImage(
+                        uri = item.uri.toString(),
+                        name = item.name.orEmpty(),
+                        modifiedAtMillis = item.lastModified(),
+                    )
+                }
+            }
+        }
+        return result.sortedByDescending(NativeSavedImage::modifiedAtMillis)
+    }
+
+    private fun listFileImages(root: File): List<NativeSavedImage> {
+        if (!root.isDirectory) return emptyList()
+        return root.walkTopDown()
+            .filter { it.isFile && it.extension.lowercase(Locale.ROOT) in SUPPORTED_EXTENSIONS }
+            .take(MAX_LISTED_IMAGES)
+            .map {
+                NativeSavedImage(
+                    uri = Uri.fromFile(it).toString(),
+                    name = it.name,
+                    modifiedAtMillis = it.lastModified(),
+                )
+            }
+            .sortedByDescending(NativeSavedImage::modifiedAtMillis)
+            .toList()
+    }
+
+    private fun DocumentFile.isSupportedImage(): Boolean {
+        val extension = name
+            ?.substringAfterLast('.', missingDelimiterValue = "")
+            ?.lowercase(Locale.ROOT)
+            .orEmpty()
+        return type?.startsWith("image/") == true || extension in SUPPORTED_EXTENSIONS
+    }
+
     private fun saveMode(): Int {
         val nativeMode = preferences.getInt(KEY_SAVE_MODE, UNKNOWN_MODE)
         if (nativeMode != UNKNOWN_MODE) return nativeMode
@@ -285,7 +385,14 @@ class NativeImageStore(private val context: Context) {
         private const val SAVE_MODE_DIRECT = 2
         private const val KEY_SAVE_MODE = "saveMode"
         private const val KEY_STORE_PATH = "storePath"
+        private const val MAX_LISTED_IMAGES = 2_000
         private val SUPPORTED_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif")
         private val SUPPORTED_MIME_TYPES = setOf("image/jpeg", "image/png", "image/webp", "image/gif")
     }
 }
+
+data class NativeSavedImage(
+    val uri: String,
+    val name: String,
+    val modifiedAtMillis: Long,
+)

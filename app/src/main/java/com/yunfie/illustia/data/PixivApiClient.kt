@@ -31,6 +31,8 @@ import com.yunfie.illustia.models.pixiv.UserWorkspace
 import com.yunfie.illustia.models.pixiv.UserFollowDetail
 import com.yunfie.illustia.models.pixiv.WatchlistMangaModel
 import com.yunfie.illustia.models.pixiv.UgoiraMetadataResponse
+import com.yunfie.illustia.models.pixiv.UgoiraFrame
+import com.yunfie.illustia.models.pixiv.UgoiraPlayback
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.regex.Pattern
@@ -75,6 +77,12 @@ class PixivApiClient(
     fun createWebLoginUrl(createProvisionalAccount: Boolean = false, codeChallenge: String): String {
         return httpClient.createWebLoginUrl(createProvisionalAccount, codeChallenge)
     }
+
+    suspend fun prepareUgoira(
+        url: String,
+        cacheDir: String,
+        frames: List<UgoiraFrame>,
+    ): UgoiraPlayback = httpClient.prepareUgoira(url, cacheDir, frames)
 
     suspend fun recommended(session: PixivSession): PageResult<Illust> {
         return getIllustPage(
@@ -865,21 +873,12 @@ class PixivApiClient(
     }
 
     private suspend fun getIllustPage(session: PixivSession, url: HttpUrl): PageResult<Illust> {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(url)
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            val illusts = root["illusts"].asArrayOrEmpty()
-            PageResult(
-                items = illusts.mapNotNull { it.asObjectOrNull()?.toIllustOrNull() },
-                nextUrl = root.string("next_url"),
-            )
-        }
+            .let { httpClient.newCall(it).awaitIllustPage() }
     }
 
     private suspend fun getNovelPage(session: PixivSession, url: HttpUrl): PageResult<NovelPreview> {

@@ -31,7 +31,6 @@ import com.yunfie.illustia.models.UserPreview
 import com.yunfie.illustia.models.UserProfile
 import com.yunfie.illustia.models.pixiv.Comment
 import com.yunfie.illustia.models.pixiv.UgoiraPlayback
-import com.yunfie.illustia.models.pixiv.UgoiraPlaybackFrame
 import com.yunfie.illustia.models.pixiv.UgoiraMetadataResponse
 import com.yunfie.illustia.settings.AppSettings
 import com.yunfie.illustia.settings.SettingsStore
@@ -72,10 +71,7 @@ import okhttp3.Request
 import com.yunfie.illustia.ui.screens.CalculatorEngine
 import com.yunfie.illustia.DummyAppIconSwitcher
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
 
 open class IllustiaViewModelCore(
     app: Application,
@@ -767,7 +763,7 @@ open class IllustiaViewModelCore(
     }
 
     fun updateLiveWallpaperSourceFolder(value: String) {
-        updateSettings { it.copy(liveWallpaperSourceFolder = value.trim().take(100)) }
+        updateSettings { it.copy(liveWallpaperSourceFolder = value.trim().take(2_048)) }
     }
 
     fun updateLiveWallpaperChangeMode(value: String) {
@@ -1511,44 +1507,11 @@ open class IllustiaViewModelCore(
             }
             val requestUrl = proxyPixivImageUrl(zipUrl, _uiState.value.settings.pixivImageProxyBaseUrl)
             val cacheRoot = File(getApplication<Application>().cacheDir, "ugoira/$illustId")
-            val zipFile = File(cacheRoot.parentFile, "$illustId.zip")
-            val extractedDir = cacheRoot
-
-            if (!extractedDir.exists() || extractedDir.listFiles().isNullOrEmpty()) {
-                extractedDir.deleteRecursively()
-                extractedDir.mkdirs()
-                zipFile.parentFile?.mkdirs()
-                val request = Request.Builder()
-                    .url(requestUrl)
-                    .header("Referer", "https://www.pixiv.net/")
-                    .header("User-Agent", "PixivAndroidApp/6.184.0 (Android 14; Palleria)")
-                    .build()
-                downloadClient.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        throw Exception(str(R.string.error_save_failed) + " (${response.code})")
-                    }
-                    val body = response.body ?: throw Exception(str(R.string.error_save_failed))
-                    body.byteStream().use { input ->
-                        FileOutputStream(zipFile).use { output -> input.copyTo(output) }
-                    }
-                }
-                unzipSafely(zipFile, extractedDir)
-            }
-
-            val frames = metadata.ugoiraMetadata.frames.mapNotNull { frame ->
-                val file = File(extractedDir, frame.file)
-                if (!file.exists()) return@mapNotNull null
-                UgoiraPlaybackFrame(
-                    filePath = file.absolutePath,
-                    delayMillis = frame.delay.coerceAtLeast(20),
-                )
-            }
-
-            if (frames.isEmpty()) {
-                throw IllegalStateException("Ugoira frames could not be prepared.")
-            }
-
-            UgoiraPlayback(frames = frames)
+            repository.prepareUgoira(
+                url = requestUrl,
+                cacheDir = cacheRoot.absolutePath,
+                frames = metadata.ugoiraMetadata.frames,
+            )
         }
     }
 
@@ -2071,30 +2034,6 @@ open class IllustiaViewModelCore(
         return target
     }
 
-    private fun unzipSafely(zipFile: File, targetDir: File) {
-        targetDir.mkdirs()
-        ZipInputStream(FileInputStream(zipFile)).use { zipInput ->
-            generateSequence { zipInput.nextEntry }.forEach { entry ->
-                if (!entry.isFileEntry()) {
-                    zipInput.closeEntry()
-                    return@forEach
-                }
-                val targetFile = File(targetDir, entry.name)
-                val targetPath = targetFile.canonicalPath
-                val basePath = targetDir.canonicalPath + File.separator
-                if (!targetPath.startsWith(basePath)) {
-                    zipInput.closeEntry()
-                    return@forEach
-                }
-                targetFile.parentFile?.mkdirs()
-                FileOutputStream(targetFile).use { output ->
-                    zipInput.copyTo(output)
-                }
-                zipInput.closeEntry()
-            }
-        }
-    }
-
     private fun String.withOfflineExtension(sourceUrl: String, responseMimeType: String?): String {
         if (contains('.')) return this
         val ext = when (responseMimeType?.substringBefore(";")?.lowercase(java.util.Locale.ROOT)) {
@@ -2128,8 +2067,6 @@ open class IllustiaViewModelCore(
             .trim(' ', '.')
         return sanitized.take(maxLength).ifBlank { "untitled" }
     }
-
-    private fun ZipEntry.isFileEntry(): Boolean = !isDirectory
 
     private fun downloadImageToGallery(url: String, filename: String) {
         val requestUrl = proxyPixivImageUrl(url, _uiState.value.settings.pixivImageProxyBaseUrl)

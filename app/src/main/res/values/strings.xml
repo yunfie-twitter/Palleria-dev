@@ -580,10 +580,10 @@
     <string name="live_wallpaper_open_preview">ライブ壁紙プレビューを開く</string>
     <string name="live_wallpaper_open_preview_desc">Androidのプレビューでホーム画面またはロック画面へ設定します</string>
     <string name="live_wallpaper_source">表示対象</string>
-    <string name="live_wallpaper_source_all">オフラインライブラリ全体</string>
-    <string name="live_wallpaper_source_folder">作者フォルダ</string>
-    <string name="live_wallpaper_folder_name">作者フォルダ名</string>
-    <string name="live_wallpaper_folder_name_desc">保存時の作者名と一致するフォルダを表示します</string>
+    <string name="live_wallpaper_source_all">Palleriaの保存画像</string>
+    <string name="live_wallpaper_source_folder">選択したフォルダ</string>
+    <string name="live_wallpaper_folder_name">表示するフォルダ</string>
+    <string name="live_wallpaper_folder_name_desc">タップして画像フォルダを選択</string>
     <string name="live_wallpaper_change_mode">切り替え方法</string>
     <string name="live_wallpaper_change_screen">画面を表示したとき</string>
     <string name="live_wallpaper_change_home">ホーム画面を移動したとき</string>

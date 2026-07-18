@@ -15,6 +15,8 @@ import com.yunfie.illustia.models.NovelTextContent
 import com.yunfie.illustia.models.pixiv.CommentResponse
 import com.yunfie.illustia.models.pixiv.IllustSeriesWithIdModel
 import com.yunfie.illustia.models.pixiv.UgoiraMetadataResponse
+import com.yunfie.illustia.models.pixiv.UgoiraFrame
+import com.yunfie.illustia.models.pixiv.UgoiraPlayback
 import com.yunfie.illustia.models.pixiv.WatchlistMangaModel
 import com.yunfie.illustia.models.UserPreview
 import com.yunfie.illustia.models.UserProfile
@@ -304,6 +306,12 @@ class IllustiaRepository(
     suspend fun ugoiraMetadata(illustId: Long): UgoiraMetadataResponse {
         return withSessionRetry { session -> apiClient.ugoiraMetadata(session, illustId) }
     }
+
+    suspend fun prepareUgoira(
+        url: String,
+        cacheDir: String,
+        frames: List<UgoiraFrame>,
+    ): UgoiraPlayback = apiClient.prepareUgoira(url, cacheDir, frames)
 
     suspend fun relatedIllusts(illustId: Long): PageResult<Illust> {
         return withSessionRetry { session -> apiClient.relatedIllusts(session, illustId) }
