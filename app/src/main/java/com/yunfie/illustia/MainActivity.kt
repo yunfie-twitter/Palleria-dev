@@ -193,6 +193,7 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+        AppShortcutRouter.accept(intent)
         viewModel.handleIncomingIntent(intent)
         enableHandoffIfSupported()
     }
@@ -211,6 +212,7 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        AppShortcutRouter.accept(intent)
         viewModel.handleIncomingIntent(intent)
     }
 

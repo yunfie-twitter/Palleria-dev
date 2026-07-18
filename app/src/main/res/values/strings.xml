@@ -2,6 +2,14 @@
     <string name="app_name">Palleria</string>
     <string name="app_name_dummy">電卓</string>
     <string name="process_text_search">Palleriaで検索</string>
+    <string name="shortcut_search">検索</string>
+    <string name="shortcut_search_long">Palleriaで検索</string>
+    <string name="shortcut_ranking">ランキング</string>
+    <string name="shortcut_ranking_long">ランキングを開く</string>
+    <string name="shortcut_bookmarks">ブックマーク</string>
+    <string name="shortcut_bookmarks_long">ブックマークを開く</string>
+    <string name="shortcut_history">閲覧履歴</string>
+    <string name="shortcut_history_long">閲覧履歴を開く</string>
 
     <!-- Navigation -->
     <string name="nav_home">ホーム</string>

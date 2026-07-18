@@ -27,6 +27,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.yunfie.illustia.IllustiaNavigationRequest
 import com.yunfie.illustia.IllustiaViewModel
+import com.yunfie.illustia.AppShortcutDestination
+import com.yunfie.illustia.AppShortcutRouter
 import com.yunfie.illustia.R
 import com.yunfie.illustia.data.pixiv.CommentArtworkType
 import com.yunfie.illustia.settings.AppHapticMode
@@ -75,6 +77,7 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val pendingShortcut by AppShortcutRouter.pending.collectAsStateWithLifecycle()
 
     val appState = IllustiaAppStateBundle(
         state = state,
@@ -210,6 +213,56 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
                 if (searchIndex >= 0) pagerState.scrollToPage(searchIndex)
             }
         }
+    }
+
+    LaunchedEffect(
+        pendingShortcut,
+        state.settingsLoaded,
+        state.settings.refreshToken,
+        state.appLocked,
+        state.privacyLocked,
+        settings.shortsFeedEnabled,
+    ) {
+        val destination = pendingShortcut ?: return@LaunchedEffect
+        if (
+            !state.settingsLoaded ||
+            state.settings.refreshToken.isBlank() ||
+            state.appLocked ||
+            state.privacyLocked
+        ) {
+            return@LaunchedEffect
+        }
+
+        backStack.clear()
+        backStack.add(AppRoute.Main)
+        selectedWatchlistSeriesIds.clear()
+        when (destination) {
+            AppShortcutDestination.Search -> {
+                if (settings.shortsFeedEnabled) {
+                    navigate(AppRoute.Search)
+                } else {
+                    selectedTab = AppTab.Search
+                    tabs.indexOf(AppTab.Search)
+                        .takeIf { it >= 0 }
+                        ?.let { pagerState.scrollToPage(it) }
+                }
+            }
+            AppShortcutDestination.Ranking -> {
+                selectedTab = AppTab.Ranking
+                tabs.indexOf(AppTab.Ranking)
+                    .takeIf { it >= 0 }
+                    ?.let { pagerState.scrollToPage(it) }
+            }
+            AppShortcutDestination.Bookmarks -> {
+                selectedTab = AppTab.Bookmarks
+                tabs.indexOf(AppTab.Bookmarks)
+                    .takeIf { it >= 0 }
+                    ?.let { pagerState.scrollToPage(it) }
+                viewModel.refreshBookmarks()
+            }
+            AppShortcutDestination.ViewHistory -> navigate(AppRoute.ViewHistory)
+        }
+        AppShortcutRouter.consume(destination)
     }
 
     LaunchedEffect(state.message) {

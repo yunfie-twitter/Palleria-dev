@@ -2,6 +2,14 @@
     <string name="app_name">Palleria</string>
     <string name="app_name_dummy">Calculator</string>
     <string name="process_text_search">Search with Palleria</string>
+    <string name="shortcut_search">Search</string>
+    <string name="shortcut_search_long">Search with Palleria</string>
+    <string name="shortcut_ranking">Ranking</string>
+    <string name="shortcut_ranking_long">Open ranking</string>
+    <string name="shortcut_bookmarks">Bookmarks</string>
+    <string name="shortcut_bookmarks_long">Open bookmarks</string>
+    <string name="shortcut_history">History</string>
+    <string name="shortcut_history_long">Open viewing history</string>
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>

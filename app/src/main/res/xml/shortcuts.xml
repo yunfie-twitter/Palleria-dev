@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="search"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_search"
+        android:shortcutLongLabel="@string/shortcut_search_long"
+        android:shortcutShortLabel="@string/shortcut_search">
+        <intent
+            android:action="com.yunfie.illustia.action.SHORTCUT_SEARCH"
+            android:targetClass="com.yunfie.illustia.MainActivity"
+            android:targetPackage="com.yunfie.illustia" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="ranking"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_ranking"
+        android:shortcutLongLabel="@string/shortcut_ranking_long"
+        android:shortcutShortLabel="@string/shortcut_ranking">
+        <intent
+            android:action="com.yunfie.illustia.action.SHORTCUT_RANKING"
+            android:targetClass="com.yunfie.illustia.MainActivity"
+            android:targetPackage="com.yunfie.illustia" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="bookmarks"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_bookmarks"
+        android:shortcutLongLabel="@string/shortcut_bookmarks_long"
+        android:shortcutShortLabel="@string/shortcut_bookmarks">
+        <intent
+            android:action="com.yunfie.illustia.action.SHORTCUT_BOOKMARKS"
+            android:targetClass="com.yunfie.illustia.MainActivity"
+            android:targetPackage="com.yunfie.illustia" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="view_history"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_history"
+        android:shortcutLongLabel="@string/shortcut_history_long"
+        android:shortcutShortLabel="@string/shortcut_history">
+        <intent
+            android:action="com.yunfie.illustia.action.SHORTCUT_VIEW_HISTORY"
+            android:targetClass="com.yunfie.illustia.MainActivity"
+            android:targetPackage="com.yunfie.illustia" />
+    </shortcut>
+</shortcuts>
