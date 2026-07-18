@@ -762,6 +762,42 @@ open class IllustiaViewModelCore(
         com.yunfie.illustia.wallpaper.WallpaperPlaylistScheduler.setEnabled(getApplication(), value)
     }
 
+    fun updateLiveWallpaperSource(value: String) {
+        updateSettings { it.copy(liveWallpaperSource = value) }
+    }
+
+    fun updateLiveWallpaperSourceFolder(value: String) {
+        updateSettings { it.copy(liveWallpaperSourceFolder = value.trim().take(100)) }
+    }
+
+    fun updateLiveWallpaperChangeMode(value: String) {
+        updateSettings { it.copy(liveWallpaperChangeMode = value) }
+    }
+
+    fun updateLiveWallpaperIntervalMinutes(value: Int) {
+        updateSettings { it.copy(liveWallpaperIntervalMinutes = value.coerceIn(15, 1440)) }
+    }
+
+    fun updateLiveWallpaperOrder(value: String) {
+        updateSettings { it.copy(liveWallpaperOrder = value) }
+    }
+
+    fun updateLiveWallpaperScaleMode(value: String) {
+        updateSettings { it.copy(liveWallpaperScaleMode = value) }
+    }
+
+    fun updateLiveWallpaperBackground(value: String) {
+        updateSettings { it.copy(liveWallpaperBackground = value) }
+    }
+
+    fun updateLiveWallpaperCrossfade(value: Boolean) {
+        updateSettings { it.copy(liveWallpaperCrossfade = value) }
+    }
+
+    fun updateLiveWallpaperExcludeSensitive(value: Boolean) {
+        updateSettings { it.copy(liveWallpaperExcludeSensitive = value) }
+    }
+
     fun updateStartupScreen(value: String) {
         updateSettings { it.copy(startupScreen = value) }
     }
@@ -1872,6 +1908,13 @@ open class IllustiaViewModelCore(
                             pageCount = 1
                             savedAt = System.currentTimeMillis()
                             saveGroup = current.artistName
+                            xRestrict = if (
+                                current.tags.any {
+                                    it.equals("R-18", ignoreCase = true) ||
+                                        it.equals("R18", ignoreCase = true) ||
+                                        it.equals("R-18G", ignoreCase = true)
+                                }
+                            ) 1 else 0
                         },
                         pages,
                     )
@@ -2704,10 +2747,26 @@ open class IllustiaViewModelCore(
     }
 
     private fun updateSettings(block: (AppSettings) -> AppSettings) {
-        val next = block(_uiState.value.settings)
+        val previous = _uiState.value.settings
+        val next = block(previous)
+        val liveWallpaperChanged =
+            previous.liveWallpaperSource != next.liveWallpaperSource ||
+                previous.liveWallpaperSourceFolder != next.liveWallpaperSourceFolder ||
+                previous.liveWallpaperChangeMode != next.liveWallpaperChangeMode ||
+                previous.liveWallpaperIntervalMinutes != next.liveWallpaperIntervalMinutes ||
+                previous.liveWallpaperOrder != next.liveWallpaperOrder ||
+                previous.liveWallpaperScaleMode != next.liveWallpaperScaleMode ||
+                previous.liveWallpaperBackground != next.liveWallpaperBackground ||
+                previous.liveWallpaperCrossfade != next.liveWallpaperCrossfade ||
+                previous.liveWallpaperExcludeSensitive != next.liveWallpaperExcludeSensitive
         _uiState.update { it.withSettings(next) }
         viewModelScope.launch(Dispatchers.IO) {
             repository.saveSettings(next)
+            if (liveWallpaperChanged) {
+                getApplication<Application>().sendBroadcast(
+                    Intent(com.yunfie.illustia.wallpaper.PalleriaLiveWallpaperService.ACTION_SETTINGS_CHANGED),
+                )
+            }
         }
     }
 

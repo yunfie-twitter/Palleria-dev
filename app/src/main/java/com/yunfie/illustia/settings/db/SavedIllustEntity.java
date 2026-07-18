@@ -16,4 +16,5 @@ public class SavedIllustEntity {
     public int pageCount;
     public long savedAt;
     public String saveGroup;
+    public int xRestrict;
 }

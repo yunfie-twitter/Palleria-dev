@@ -39,6 +39,19 @@
             android:name=".wallpaper.WallpaperPlaylistReceiver"
             android:exported="false" />
 
+        <service
+            android:name=".wallpaper.PalleriaLiveWallpaperService"
+            android:exported="true"
+            android:label="@string/live_wallpaper"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/palleria_live_wallpaper" />
+        </service>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

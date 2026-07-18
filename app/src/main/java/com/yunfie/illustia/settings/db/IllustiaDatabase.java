@@ -5,6 +5,8 @@ import android.content.Context;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.migration.Migration;
+import androidx.sqlite.db.SupportSQLiteDatabase;
 
 @Database(
         entities = {
@@ -15,13 +17,19 @@ import androidx.room.RoomDatabase;
                 SavedIllustEntity.class,
                 SavedIllustPageEntity.class
         },
-        version = 2,
+        version = 3,
         exportSchema = false
 )
 public abstract class IllustiaDatabase extends RoomDatabase {
     public abstract SettingsDao settingsDao();
 
     private static volatile IllustiaDatabase INSTANCE;
+    private static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE saved_illusts ADD COLUMN xRestrict INTEGER NOT NULL DEFAULT 0");
+        }
+    };
 
     public static IllustiaDatabase getInstance(Context context) {
         IllustiaDatabase current = INSTANCE;
@@ -36,6 +44,7 @@ public abstract class IllustiaDatabase extends RoomDatabase {
                                 IllustiaDatabase.class,
                                 "illustia.db"
                         )
+                        .addMigrations(MIGRATION_2_3)
                         .fallbackToDestructiveMigration()
                         .build();
                 INSTANCE = current;
