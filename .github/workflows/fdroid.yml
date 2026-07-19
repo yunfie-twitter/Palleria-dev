@@ -18,10 +18,35 @@ permissions:
   id-token: write
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      buildgradle: ${{ steps.filter.outputs.buildgradle }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            buildgradle:
+              - 'app/build.gradle'
+              # Kotlin DSLの場合は追加
+              # - 'app/build.gradle.kts'
+
   build:
+    needs: changes
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.ref, 'refs/tags/') ||
+      needs.changes.outputs.buildgradle == 'true'
+
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.version.outputs.tag }}
+
     steps:
       - uses: actions/checkout@v7
         with:
@@ -31,7 +56,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -53,17 +78,17 @@ jobs:
       - name: Get Version Info
         id: version
         run: |
-          # build.gradleからversionNameとversionCodeを堅牢に抽出
           VERSION_NAME=$(grep "versionName" app/build.gradle | head -n 1 | awk -F'"' '{print $2}' | sed "s/'//g")
           VERSION_CODE=$(grep "versionCode" app/build.gradle | head -n 1 | awk '{print $NF}')
-          
+
           if [ -z "$VERSION_NAME" ]; then
             VERSION_NAME=$(grep "versionName" app/build.gradle | head -n 1 | awk -F"'" '{print $2}')
           fi
-          
+
           echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION_NAME" >> $GITHUB_OUTPUT
+
           echo "Detected version: $VERSION_NAME ($VERSION_CODE)"
 
       - name: Cancel if duplicate tag already exists
@@ -71,7 +96,7 @@ jobs:
         run: |
           TAG_NAME="${{ steps.version.outputs.tag }}"
           if git ls-remote --tags origin "refs/tags/$TAG_NAME" | grep -q "refs/tags/$TAG_NAME"; then
-            echo "Tag $TAG_NAME already exists on origin. Stopping this run."
+            echo "Tag $TAG_NAME already exists on origin."
             exit 78
           fi
 
@@ -83,7 +108,7 @@ jobs:
         run: |
           TAG_NAME="${{ github.ref_name }}"
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Release $TAG_NAME already exists. Stopping this run."
+            echo "Release already exists."
             exit 78
           fi
 
@@ -92,13 +117,10 @@ jobs:
         run: |
           TAG_NAME="${{ steps.version.outputs.tag }}"
           if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Creating new tag: $TAG_NAME"
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git tag "$TAG_NAME"
             git push origin "$TAG_NAME"
-          else
-            echo "Tag $TAG_NAME already exists, skipping."
           fi
 
       - name: Build APKs
@@ -121,28 +143,18 @@ jobs:
         run: |
           mkdir -p public/repo
           mkdir -p public/metadata
-          
-          # 1. gh-pages から既存の資産（過去のAPKやアイコン、メタデータ）をコピーして保持
-          git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git old-repo || true
-          if [ -d old-repo/repo ]; then
-            echo "Copying existing APKs and icons..."
-            cp -r old-repo/repo/. public/repo/
-          fi
-          if [ -d old-repo/metadata ]; then
-            echo "Copying existing metadata from gh-pages..."
-            cp -r old-repo/metadata/. public/metadata/
-          fi
-          
-          # 2. ソースコード側の fdroid/metadata があればマージ
-          if [ -d fdroid/metadata ]; then
-            echo "Merging metadata from source..."
-            cp -r fdroid/metadata/. public/metadata/
-          fi
-          
-          # 3. 今回ビルドされた新しいAPKをコピー
+
+          git clone --branch gh-pages --single-branch \
+            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git old-repo || true
+
+          [ -d old-repo/repo ] && cp -r old-repo/repo/. public/repo/
+          [ -d old-repo/metadata ] && cp -r old-repo/metadata/. public/metadata/
+          [ -d fdroid/metadata ] && cp -r fdroid/metadata/. public/metadata/
+
           cp app/build/outputs/apk/release/*.apk public/repo/
-          
+
           cd public
+
           cat <<EOF > config.yml
           repo_url: https://yunfi.f5.si/${{ github.event.repository.name }}/repo
           repo_name: Palleria Dev Repository
@@ -156,11 +168,11 @@ jobs:
           repo_keystorepass: "${{ secrets.RELEASE_KEYSTORE_PASSWORD }}"
           repo_keypass: "${{ secrets.RELEASE_KEY_PASSWORD }}"
           EOF
+
           chmod 600 config.yml
-          
           fdroid update --create-metadata --pretty
-          
           rm config.yml
+
           cd ..
 
       - name: Deploy to GitHub Pages
@@ -172,7 +184,6 @@ jobs:
           force_orphan: false
 
       - name: Create GitHub Release
-        # タグの直接プッシュ、mainへのプッシュ（自動タグ生成後）のどちらでも確実に動くように条件を最適化
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
