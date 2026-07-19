@@ -74,9 +74,7 @@ fun IllustSeriesScreen(
     val settings by viewModel.settingsState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val gridState = rememberLazyGridState()
-    val feedHighQuality = remember(settings.highQualityImages, settings.feedPreviewQuality) {
-        settings.highQualityImages && settings.feedPreviewQuality != "low"
-    }
+    val feedHighQuality = settings.useHighQualityFeedImages
     val showAiBadge = remember(settings.showAiBadge) { settings.showAiBadge }
     val prefetchUrls = remember(state.illusts, feedHighQuality) {
         state.illusts.asSequence()

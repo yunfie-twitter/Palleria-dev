@@ -76,7 +76,7 @@ internal fun NovelReaderPage(
                 }
                 is NovelJumpBlock -> {
                     Button(onClick = { onJumpPage(block.pageNumber - 1) }) {
-                        Text(text = "Go to page ${block.pageNumber}")
+                        Text(text = stringResource(R.string.novel_go_to_page, block.pageNumber))
                     }
                 }
                 is NovelParagraphBlock -> {

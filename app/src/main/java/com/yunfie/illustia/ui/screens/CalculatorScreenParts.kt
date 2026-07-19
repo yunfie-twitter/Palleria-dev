@@ -48,6 +48,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yunfie.illustia.CalculatorHistoryEntry
+import com.yunfie.illustia.R
+import androidx.compose.ui.res.stringResource
 import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Text
@@ -67,7 +69,7 @@ internal fun CalculatorHistorySection(
 
     Column(modifier = modifier) {
         Text(
-            text = "履歴",
+            text = stringResource(R.string.calculator_history),
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             style = MiuixTheme.textStyles.footnote1,
             modifier = Modifier
@@ -93,7 +95,7 @@ internal fun CalculatorHistorySection(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "計算履歴はありません",
+                    text = stringResource(R.string.calculator_history_empty),
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     style = MiuixTheme.textStyles.footnote1,
                 )
@@ -116,7 +118,7 @@ internal fun CalculatorHistorySection(
     if (showUnlockDialog) {
         OverlayDialog(
             show = true,
-            title = "解除コードを入力",
+            title = stringResource(R.string.privacy_enter_unlock_code),
             onDismissRequest = {
                 showUnlockDialog = false
                 unlockCode = ""
@@ -126,7 +128,7 @@ internal fun CalculatorHistorySection(
                 TextField(
                     value = unlockCode,
                     onValueChange = { unlockCode = it },
-                    label = "解除コード",
+                    label = stringResource(R.string.privacy_unlock_code),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(
@@ -146,7 +148,7 @@ internal fun CalculatorHistorySection(
                         modifier = Modifier.weight(1f),
                         colors = overlayActionButtonColors(),
                     ) {
-                        Text("キャンセル")
+                        Text(stringResource(R.string.action_cancel))
                     }
                     Button(
                         onClick = {
@@ -158,7 +160,7 @@ internal fun CalculatorHistorySection(
                         modifier = Modifier.weight(1f),
                         colors = overlayActionButtonColors(),
                     ) {
-                        Text("確認", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.action_confirm), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -198,7 +200,11 @@ internal fun CalculatorDisplay(
     buffer: String,
     modifier: Modifier = Modifier,
 ) {
-    val displayText = if (buffer.isEmpty()) "0" else buffer
+    val displayText = when {
+        buffer.isEmpty() -> "0"
+        buffer == "エラー" -> stringResource(R.string.calculator_error)
+        else -> buffer
+    }
 
     Text(
         text = displayText,

@@ -64,7 +64,7 @@ fun FavoriteTagsScreen(
     PredictiveBackGestureHandler(onBack = onBack)
 
     val gridState = rememberLazyGridState()
-    val feedHighQuality = state.settings.highQualityImages && state.settings.feedPreviewQuality != "low"
+    val feedHighQuality = state.settings.useHighQualityFeedImages
     val showAiBadge = state.settings.showAiBadge
 
     // 選択中タグ（最初のタグをデフォルト選択）

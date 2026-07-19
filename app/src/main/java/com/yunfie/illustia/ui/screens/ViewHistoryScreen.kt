@@ -52,7 +52,7 @@ fun ViewHistoryScreen(
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val gridState = rememberLazyGridState()
-    val feedHighQuality = state.settings.highQualityImages && state.settings.feedPreviewQuality != "low"
+    val feedHighQuality = state.settings.useHighQualityFeedImages
     val showAiBadge = state.settings.showAiBadge
     val hasSelection = selectedIds.isNotEmpty()
     val selectedCountText = stringResource(R.string.data_items_count, selectedIds.size)

@@ -9,7 +9,9 @@ enum class AppLanguage(
 ) {
     System("system", null),
     Japanese("ja", "ja-JP"),
-    English("en", "en-US");
+    English("en", "en-US"),
+    SimplifiedChinese("zh-Hans", "zh-Hans"),
+    TraditionalChinese("zh-Hant", "zh-Hant");
 
     companion object {
         fun fromValue(value: String): AppLanguage {
@@ -32,14 +34,25 @@ fun appLanguageLabelRes(value: String): Int {
         AppLanguage.System -> R.string.language_system
         AppLanguage.Japanese -> R.string.language_japanese
         AppLanguage.English -> R.string.language_english
+        AppLanguage.SimplifiedChinese -> R.string.language_chinese_simplified
+        AppLanguage.TraditionalChinese -> R.string.language_chinese_traditional
     }
 }
 
 fun currentAcceptLanguage(): String {
     val primaryLanguage = LocaleList.getDefault().get(0)?.language.orEmpty()
-    return if (primaryLanguage == "ja") {
-        AppLanguage.Japanese.languageTag ?: "ja-JP"
-    } else {
-        AppLanguage.English.languageTag ?: "en-US"
+    return when (primaryLanguage) {
+        "ja" -> AppLanguage.Japanese.languageTag ?: "ja-JP"
+        "zh" -> {
+            val locale = LocaleList.getDefault().get(0)
+            if (locale?.script.equals("Hant", ignoreCase = true) ||
+                locale?.country in setOf("TW", "HK", "MO")
+            ) {
+                AppLanguage.TraditionalChinese.languageTag ?: "zh-Hant"
+            } else {
+                AppLanguage.SimplifiedChinese.languageTag ?: "zh-Hans"
+            }
+        }
+        else -> AppLanguage.English.languageTag ?: "en-US"
     }
 }

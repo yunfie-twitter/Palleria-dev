@@ -79,9 +79,7 @@ fun BookmarkScreen(
         }
     }
 
-    val feedHighQuality = remember(settings.highQualityImages, settings.feedPreviewQuality) {
-        settings.highQualityImages && settings.feedPreviewQuality != "low"
-    }
+    val feedHighQuality = settings.useHighQualityFeedImages
     val showAiBadge = remember(settings.showAiBadge) { settings.showAiBadge }
     val activeItems = when (selectedTopTab) {
         0 -> timelineItems

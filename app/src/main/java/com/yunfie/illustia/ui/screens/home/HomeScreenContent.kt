@@ -86,9 +86,7 @@ internal fun FeedTabContent(
     viewModel: IllustiaViewModel,
     scrollBehavior: ScrollBehavior = MiuixScrollBehavior(),
 ) {
-    val feedHighQuality = remember(settings.highQualityImages, settings.feedPreviewQuality) {
-        settings.highQualityImages && settings.feedPreviewQuality != "low"
-    }
+    val feedHighQuality = settings.useHighQualityFeedImages
     val showAiBadge = remember(settings.showAiBadge) { settings.showAiBadge }
     val gridState = viewModel.homeFeedGridState
     val prefetchUrls = remember(items, feedHighQuality) {
@@ -178,9 +176,7 @@ internal fun FollowingTabContent(
     viewModel: IllustiaViewModel,
     scrollBehavior: ScrollBehavior = MiuixScrollBehavior(),
 ) {
-    val feedHighQuality = remember(settings.highQualityImages, settings.feedPreviewQuality) {
-        settings.highQualityImages && settings.feedPreviewQuality != "low"
-    }
+    val feedHighQuality = settings.useHighQualityFeedImages
     val showAiBadge = remember(settings.showAiBadge) { settings.showAiBadge }
     val gridState = viewModel.homeTimelineGridState
     val prefetchUrls = remember(items, feedHighQuality) {

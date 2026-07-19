@@ -42,9 +42,7 @@ internal fun BrowseArea(
     showHeader: Boolean = false,
     onIllustSelected: ((Illust) -> Unit)? = null,
 ) {
-    val feedHighQuality = remember(state.settings.highQualityImages, state.settings.feedPreviewQuality) {
-        state.settings.highQualityImages && state.settings.feedPreviewQuality != "low"
-    }
+    val feedHighQuality = state.settings.useHighQualityFeedImages
     val showAiBadge = remember(state.settings.showAiBadge) { state.settings.showAiBadge }
     val browsePrefetchUrls = remember(state.settings.viewHistory, state.homeItems, state.searchItems, feedHighQuality) {
         val historyUrls = state.settings.viewHistory.visibleWithMutedTagsVisible(state.settings).take(8).map {

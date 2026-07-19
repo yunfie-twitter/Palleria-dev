@@ -100,4 +100,7 @@ data class AppSettings(
     val hideNotifications: Boolean = false,
     val dummyAppName: String = "電卓",
     val dummyIconVariant: String = "ic_launcher_dummy",
-)
+) {
+    val useHighQualityFeedImages: Boolean
+        get() = highQualityImages && feedPreviewQuality != "low"
+}

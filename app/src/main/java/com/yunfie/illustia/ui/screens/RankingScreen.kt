@@ -225,9 +225,7 @@ private fun RankingGridContent(
     scrollBehavior: ScrollBehavior = MiuixScrollBehavior(),
     modifier: Modifier = Modifier,
 ) {
-    val feedHighQuality = remember(settings.highQualityImages, settings.feedPreviewQuality) {
-        settings.highQualityImages && settings.feedPreviewQuality != "low"
-    }
+    val feedHighQuality = settings.useHighQualityFeedImages
     val showAiBadge = remember(settings.showAiBadge) { settings.showAiBadge }
     val gridState = viewModel.rankingGridState
     val prefetchUrls = remember(items, feedHighQuality) {

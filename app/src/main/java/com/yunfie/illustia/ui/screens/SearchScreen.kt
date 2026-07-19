@@ -53,6 +53,7 @@ import com.yunfie.illustia.nativebridge.NativeIntentRouter
 import com.yunfie.illustia.data.pixiv.SuggestionStore
 import com.yunfie.illustia.ui.components.*
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
@@ -85,8 +86,11 @@ fun SearchScreen(
         }
     }
 
-    val liveQuery = if (searchExpanded) state.searchDraft else state.activeSearchWord
+    val liveQuery = (if (searchExpanded) state.searchDraft else state.activeSearchWord).trim()
     LaunchedEffect(liveQuery) {
+        if (liveQuery.isNotEmpty()) {
+            delay(250)
+        }
         suggestionStore.fetch(liveQuery)
     }
 

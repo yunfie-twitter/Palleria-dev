@@ -22,6 +22,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.yunfie.illustia.R
 import com.yunfie.illustia.IllustiaUiState
 import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.ui.components.DividerLine
@@ -51,12 +53,12 @@ private val AUTO_LOCK_VALUES = listOf("immediate", "30s", "1m", "5m", "10m", "di
 
 @Composable
 private fun autoLockLabel(value: String): String = when (value) {
-    "immediate" -> "即時"
-    "30s"       -> "30秒"
-    "1m"        -> "1分"
-    "5m"        -> "5分"
-    "10m"       -> "10分"
-    "disabled"  -> "無効"
+    "immediate" -> stringResource(R.string.privacy_auto_lock_immediate)
+    "30s"       -> stringResource(R.string.privacy_auto_lock_30s)
+    "1m"        -> stringResource(R.string.privacy_auto_lock_1m)
+    "5m"        -> stringResource(R.string.privacy_auto_lock_5m)
+    "10m"       -> stringResource(R.string.privacy_auto_lock_10m)
+    "disabled"  -> stringResource(R.string.privacy_auto_lock_disabled)
     else        -> value
 }
 
@@ -66,7 +68,7 @@ private val DUMMY_ICON_VALUES = listOf("ic_launcher_dummy")
 
 @Composable
 private fun dummyIconLabel(value: String): String = when (value) {
-    "ic_launcher_dummy" -> "電卓（デフォルト）"
+    "ic_launcher_dummy" -> stringResource(R.string.privacy_dummy_icon_calculator)
     else -> value
 }
 
@@ -97,13 +99,15 @@ fun PrivacyModeSettingsScreen(
     var showDummyNameDialog by remember { mutableStateOf(false) }
     var dummyNameDraft by remember { mutableStateOf("") }
     var dummyNameError by remember { mutableStateOf<String?>(null) }
+    val changeCodeErrorText = stringResource(R.string.privacy_change_code_error)
+    val dummyNameErrorText = stringResource(R.string.privacy_dummy_name_error)
 
     Scaffold(
         containerColor = MiuixTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-                title = "プライバシーモード",
-                largeTitle = "プライバシーモード",
+                title = stringResource(R.string.privacy_mode_title),
+                largeTitle = stringResource(R.string.privacy_mode_title),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     HeaderIcon(MiuixIcons.Back, onClick = onBack)
@@ -127,11 +131,11 @@ fun PrivacyModeSettingsScreen(
 
             // ── Section 1: Enable / Disable ───────────────────────────────────
             item {
-                Section("プライバシーモード") {
+                Section(stringResource(R.string.privacy_mode_title)) {
                     ElevatedPanel {
                         // 1. Privacy Mode ON/OFF toggle (Req 11.2, 1.1–1.3)
                         SettingSwitchRow(
-                            title = "プライバシーモード",
+                            title = stringResource(R.string.privacy_mode_title),
                             checked = state.settings.privacyModeEnabled,
                             onCheckedChange = { enabled ->
                                 if (enabled) {
@@ -141,9 +145,9 @@ fun PrivacyModeSettingsScreen(
                                 }
                             },
                             summary = if (state.settings.privacyModeEnabled)
-                                "有効 — 起動時に電卓を表示します"
+                                stringResource(R.string.privacy_mode_enabled_desc)
                             else
-                                "無効 — 通常の起動画面を表示します",
+                                stringResource(R.string.privacy_mode_disabled_desc),
                         )
                     }
                 }
@@ -151,12 +155,12 @@ fun PrivacyModeSettingsScreen(
 
             // ── Section 2: Unlock code ─────────────────────────────────────────
             item {
-                Section("解除コード") {
+                Section(stringResource(R.string.privacy_unlock_code_section)) {
                     ElevatedPanel {
                         // 2. Change unlock code (Req 5.3, 5.4, 5.7)
                         SettingLinkRow(
-                            title = "解除コードを変更",
-                            summary = "現在のコードを確認してから新しいコードを設定します",
+                            title = stringResource(R.string.privacy_change_code),
+                            summary = stringResource(R.string.privacy_change_code_desc),
                             onClick = {
                                 currentCode = ""
                                 newCode = ""
@@ -170,12 +174,12 @@ fun PrivacyModeSettingsScreen(
 
             // ── Section 3: Lock behaviour ──────────────────────────────────────
             item {
-                Section("ロック動作") {
+                Section(stringResource(R.string.privacy_lock_behavior)) {
                     ElevatedPanel {
                         // 3. Auto-lock timing selection (Req 6.4–6.6)
                         SettingDropdownRow(
-                            title = "自動ロック",
-                            summary = "バックグラウンド移行時のロックタイミング",
+                            title = stringResource(R.string.privacy_auto_lock),
+                            summary = stringResource(R.string.privacy_auto_lock_desc),
                             values = AUTO_LOCK_VALUES,
                             selected = state.settings.privacyModeAutoLockTiming,
                             label = { autoLockLabel(it) },
@@ -187,22 +191,22 @@ fun PrivacyModeSettingsScreen(
 
             // ── Section 4: Privacy ─────────────────────────────────────────────
             item {
-                Section("プライバシー") {
+                Section(stringResource(R.string.privacy_section)) {
                     ElevatedPanel {
                         // 4. Hide Recents toggle (Req 7.1–7.4)
                         SettingSwitchRow(
-                            title = "最近使ったアプリ画面を隠す",
+                            title = stringResource(R.string.privacy_hide_recents),
                             checked = state.settings.hideRecents,
                             onCheckedChange = { viewModel.updateHideRecents(it) },
-                            summary = "タスク切り替え画面に電卓のサムネイルを表示します",
+                            summary = stringResource(R.string.privacy_hide_recents_desc),
                         )
                         DividerLine()
                         // 5. Hide Notifications toggle (Req 9.1–9.4)
                         SettingSwitchRow(
-                            title = "通知内容を隠す",
+                            title = stringResource(R.string.privacy_hide_notifications),
                             checked = state.settings.hideNotifications,
                             onCheckedChange = { viewModel.updateHideNotifications(it) },
-                            summary = "通知のタイトル・本文を汎用テキストに置き換えます",
+                            summary = stringResource(R.string.privacy_hide_notifications_desc),
                         )
                     }
                 }
@@ -210,12 +214,12 @@ fun PrivacyModeSettingsScreen(
 
             // ── Section 5: Disguise ────────────────────────────────────────────
             item {
-                Section("ダミーアプリ設定") {
+                Section(stringResource(R.string.privacy_disguise_section)) {
                     ElevatedPanel {
                         // 6. Dummy app name text input (Req 10.1, 10.3)
                         SettingLinkRow(
-                            title = "ダミーアプリ名",
-                            summary = state.settings.dummyAppName.ifBlank { "（未設定）" },
+                            title = stringResource(R.string.privacy_dummy_app_name),
+                            summary = state.settings.dummyAppName.ifBlank { stringResource(R.string.value_not_set) },
                             onClick = {
                                 dummyNameDraft = state.settings.dummyAppName
                                 dummyNameError = null
@@ -225,8 +229,8 @@ fun PrivacyModeSettingsScreen(
                         DividerLine()
                         // 7. Dummy icon variant selector (Req 10.2, 10.4)
                         SettingDropdownRow(
-                            title = "ダミーアイコン",
-                            summary = "ランチャーに表示するアイコンを選択します",
+                            title = stringResource(R.string.privacy_dummy_icon),
+                            summary = stringResource(R.string.privacy_dummy_icon_desc),
                             values = DUMMY_ICON_VALUES,
                             selected = state.settings.dummyIconVariant,
                             label = { dummyIconLabel(it) },
@@ -243,7 +247,7 @@ fun PrivacyModeSettingsScreen(
     if (showChangeCodeDialog) {
         OverlayDialog(
             show = true,
-            title = "解除コードを変更",
+            title = stringResource(R.string.privacy_change_code),
             onDismissRequest = {
                 showChangeCodeDialog = false
                 currentCode = ""
@@ -259,7 +263,7 @@ fun PrivacyModeSettingsScreen(
                         currentCode = it
                         changeCodeError = null
                     },
-                    label = "現在の解除コード",
+                    label = stringResource(R.string.privacy_current_code),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = PasswordVisualTransformation(),
@@ -276,7 +280,7 @@ fun PrivacyModeSettingsScreen(
                         newCode = it
                         changeCodeError = null
                     },
-                    label = "新しい解除コード（4〜20文字）",
+                    label = stringResource(R.string.privacy_new_code),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = PasswordVisualTransformation(),
@@ -312,7 +316,7 @@ fun PrivacyModeSettingsScreen(
                         colors = overlayActionButtonColors(),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     ) {
-                        Text("キャンセル")
+                        Text(stringResource(R.string.action_cancel))
                     }
                     Button(
                         onClick = {
@@ -325,15 +329,14 @@ fun PrivacyModeSettingsScreen(
                                 changeCodeError = null
                             } else {
                                 // Show error — either wrong current code or invalid new code (Req 5.7)
-                                changeCodeError = "コードの変更に失敗しました。現在のコードが正しいこと、" +
-                                    "新しいコードが4〜20文字の有効な形式であることを確認してください。"
+                                changeCodeError = changeCodeErrorText
                             }
                         },
                         modifier = Modifier.weight(1f),
                         colors = overlayActionButtonColors(),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     ) {
-                        Text("変更する", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.action_change), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -345,7 +348,7 @@ fun PrivacyModeSettingsScreen(
     if (showDummyNameDialog) {
         OverlayDialog(
             show = true,
-            title = "ダミーアプリ名を変更",
+            title = stringResource(R.string.privacy_change_dummy_name),
             onDismissRequest = {
                 showDummyNameDialog = false
                 dummyNameDraft = ""
@@ -362,7 +365,7 @@ fun PrivacyModeSettingsScreen(
                             dummyNameError = null
                         }
                     },
-                    label = "アプリ名（1〜30文字）",
+                    label = stringResource(R.string.privacy_dummy_name_field),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(
@@ -395,13 +398,13 @@ fun PrivacyModeSettingsScreen(
                         colors = overlayActionButtonColors(),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     ) {
-                        Text("キャンセル")
+                        Text(stringResource(R.string.action_cancel))
                     }
                     Button(
                         onClick = {
                             val trimmed = dummyNameDraft.trim()
                             if (trimmed.isBlank()) {
-                                dummyNameError = "アプリ名を空にすることはできません。"
+                                dummyNameError = dummyNameErrorText
                             } else {
                                 viewModel.updateDummyAppName(trimmed)
                                 showDummyNameDialog = false
@@ -413,7 +416,7 @@ fun PrivacyModeSettingsScreen(
                         colors = overlayActionButtonColors(),
                         insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     ) {
-                        Text("保存", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.action_save), fontWeight = FontWeight.Bold)
                     }
                 }
             }

@@ -5,25 +5,38 @@ import com.yunfie.illustia.HomeChromeState
 import com.yunfie.illustia.IllustiaUiState
 import com.yunfie.illustia.NovelChromeState
 import com.yunfie.illustia.RankingChromeState
-import com.yunfie.illustia.models.Illust
-import com.yunfie.illustia.models.LoadState
-import com.yunfie.illustia.models.NovelPreview
-import com.yunfie.illustia.models.UserPreview
-import com.yunfie.illustia.settings.AppSettings
 
-internal data class IllustiaAppStateBundle(
+internal class IllustiaAppStateBundle(
     val state: IllustiaUiState,
-    val settings: AppSettings,
-    val loadState: LoadState,
-    val homeItems: List<Illust>,
-    val novelItems: List<NovelPreview>,
-    val timelineItems: List<Illust>,
-    val rankingItems: List<Illust>,
-    val bookmarkItems: List<Illust>,
-    val watchlistItems: List<Illust>,
-    val followingUsers: List<UserPreview>,
-    val homeChrome: HomeChromeState,
-    val novelChrome: NovelChromeState,
-    val rankingChrome: RankingChromeState,
-    val bookmarkChrome: BookmarkChromeState,
-)
+) {
+    val settings = state.settings
+    val loadState = state.loadState
+    val homeItems = state.homeItems
+    val novelItems = state.novelItems
+    val timelineItems = state.timelineItems
+    val rankingItems = state.rankingItems
+    val bookmarkItems = state.bookmarkItems
+    val watchlistItems = state.watchlistItems
+    val followingUsers = state.followingUsers
+
+    val homeChrome = HomeChromeState(
+        homeKind = state.homeKind,
+        homeNextUrl = state.homeNextUrl,
+        timelineNextUrl = state.timelineNextUrl,
+    )
+    val novelChrome = NovelChromeState(
+        novelNextUrl = state.novelNextUrl,
+    )
+    val rankingChrome = RankingChromeState(
+        rankingMode = state.rankingMode,
+        rankingNextUrl = state.rankingNextUrl,
+    )
+    val bookmarkChrome = BookmarkChromeState(
+        bookmarkNextUrl = state.bookmarkNextUrl,
+        timelineNextUrl = state.timelineNextUrl,
+        watchlistNextUrl = state.watchlistNextUrl,
+        activeWatchlistTag = state.activeWatchlistTag,
+        followingUsersNextUrl = state.followingUsersNextUrl,
+        selectedTab = state.bookmarkSelectedTab,
+    )
+}

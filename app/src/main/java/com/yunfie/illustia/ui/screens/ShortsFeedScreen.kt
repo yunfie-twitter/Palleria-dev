@@ -72,7 +72,7 @@ fun ShortsFeedScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         if (items.isEmpty()) {
             Text(
-                text = "イラストを読み込んでいます…",
+                text = stringResource(R.string.shorts_loading),
                 color = Color.White,
                 modifier = Modifier.align(Alignment.Center),
             )

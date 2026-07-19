@@ -469,7 +469,7 @@ private fun UserIllustGridPage(
                 onBookmark = { onBookmark(illust) },
                 onClick = { onOpenIllust(illust) },
                 modifier = Modifier.animateItem(),
-                highQualityImages = settings.highQualityImages && settings.feedPreviewQuality != "low",
+                highQualityImages = settings.useHighQualityFeedImages,
                 showAiBadge = settings.showAiBadge,
             )
         }

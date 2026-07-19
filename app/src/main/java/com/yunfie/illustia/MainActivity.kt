@@ -350,6 +350,8 @@ class MainActivity : FragmentActivity() {
                 when (language) {
                     "ja" -> "ja-JP"
                     "en" -> "en-US"
+                    "zh-Hans" -> "zh-Hans"
+                    "zh-Hant" -> "zh-Hant"
                     else -> ""
                 },
             ),

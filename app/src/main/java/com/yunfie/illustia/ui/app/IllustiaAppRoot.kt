@@ -46,19 +46,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val settings by viewModel.settingsState.collectAsStateWithLifecycle()
-    val loadState by viewModel.loadStateState.collectAsStateWithLifecycle()
-    val homeItems by viewModel.homeItemsState.collectAsStateWithLifecycle()
-    val novelItems by viewModel.novelItemsState.collectAsStateWithLifecycle()
-    val timelineItems by viewModel.timelineItemsState.collectAsStateWithLifecycle()
-    val rankingItems by viewModel.rankingItemsState.collectAsStateWithLifecycle()
-    val bookmarkItems by viewModel.bookmarkItemsState.collectAsStateWithLifecycle()
-    val watchlistItems by viewModel.watchlistItemsState.collectAsStateWithLifecycle()
-    val followingUsers by viewModel.followingUsersState.collectAsStateWithLifecycle()
-    val homeChrome by viewModel.homeChromeState.collectAsStateWithLifecycle()
-    val novelChrome by viewModel.novelChromeState.collectAsStateWithLifecycle()
-    val rankingChrome by viewModel.rankingChromeState.collectAsStateWithLifecycle()
-    val bookmarkChrome by viewModel.bookmarkChromeState.collectAsStateWithLifecycle()
+    val settings = state.settings
     val startupScreen = state.settings.startupScreen
     val tabs = mainTabs(settings.shortsFeedEnabled)
     val initialTab = remember(startupScreen) { startupTabFor(startupScreen) }
@@ -79,22 +67,7 @@ internal fun IllustiaAppRoot(viewModel: IllustiaViewModel) {
     val context = LocalContext.current
     val pendingShortcut by AppShortcutRouter.pending.collectAsStateWithLifecycle()
 
-    val appState = IllustiaAppStateBundle(
-        state = state,
-        settings = settings,
-        loadState = loadState,
-        homeItems = homeItems,
-        novelItems = novelItems,
-        timelineItems = timelineItems,
-        rankingItems = rankingItems,
-        bookmarkItems = bookmarkItems,
-        watchlistItems = watchlistItems,
-        followingUsers = followingUsers,
-        homeChrome = homeChrome,
-        novelChrome = novelChrome,
-        rankingChrome = rankingChrome,
-        bookmarkChrome = bookmarkChrome,
-    )
+    val appState = IllustiaAppStateBundle(state)
 
     LaunchedEffect(state.webLoginRequest) {
         val request = state.webLoginRequest ?: return@LaunchedEffect

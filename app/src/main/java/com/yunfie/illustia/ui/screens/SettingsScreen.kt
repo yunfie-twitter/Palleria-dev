@@ -67,7 +67,12 @@ fun SettingsScreen(
             SettingsCategory(context.getString(R.string.settings_bookmark), context.getString(R.string.settings_bookmark_summary), MiuixIcons.FavoritesFill) { viewModel.openBookmarkSettings() },
             SettingsCategory(context.getString(R.string.settings_account), if (state.settings.refreshToken.isNotBlank()) context.getString(R.string.settings_logged_in) else context.getString(R.string.settings_not_logged_in), MiuixIcons.Contacts) { viewModel.openAccountSettings() },
             SettingsCategory(context.getString(R.string.settings_data), "${context.getString(R.string.more_view_history)} ${context.getString(R.string.data_items_count, state.settings.viewHistory.size)} / ${context.getString(R.string.more_mute_settings)} ${context.getString(R.string.data_items_count, mutedTotal)}", MiuixIcons.Timer) { viewModel.openDataSettings() },
-            SettingsCategory("プライバシーモード", if (state.settings.privacyModeEnabled) "有効 — 電卓でカモフラージュ中" else "無効", MiuixIcons.Lock) { viewModel.openPrivacyModeSettings() },
+            SettingsCategory(
+                context.getString(R.string.privacy_mode_title),
+                if (state.settings.privacyModeEnabled) context.getString(R.string.privacy_settings_enabled)
+                else context.getString(R.string.privacy_settings_disabled),
+                MiuixIcons.Lock,
+            ) { viewModel.openPrivacyModeSettings() },
         )
     }
 
@@ -122,7 +127,7 @@ fun SettingsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text("${stringResource(R.string.app_name)} v$appVersion", color = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.6f), style = MiuixTheme.textStyles.footnote1)
-                    Text("Developed with Love for Art", color = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.6f), style = MiuixTheme.textStyles.footnote1, textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.settings_footer), color = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.6f), style = MiuixTheme.textStyles.footnote1, textAlign = TextAlign.Center)
                 }
             }
         }

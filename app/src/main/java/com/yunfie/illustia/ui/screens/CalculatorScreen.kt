@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yunfie.illustia.CalculatorHistoryEntry
 import com.yunfie.illustia.IllustiaViewModel
+import com.yunfie.illustia.R
+import androidx.compose.ui.res.stringResource
 import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Text
@@ -170,7 +172,7 @@ fun CalculatorScreen(
         if (showCornerUnlockDialog) {
             OverlayDialog(
                 show = true,
-                title = "解除コードを入力",
+                title = stringResource(R.string.privacy_enter_unlock_code),
                 onDismissRequest = {
                     // キャンセル時: ダイアログを閉じるだけでフィードバックなし (Req 4.7)
                     showCornerUnlockDialog = false
@@ -181,7 +183,7 @@ fun CalculatorScreen(
                     TextField(
                         value = cornerUnlockCode,
                         onValueChange = { cornerUnlockCode = it },
-                        label = "解除コード",
+                        label = stringResource(R.string.privacy_unlock_code),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(
@@ -201,7 +203,7 @@ fun CalculatorScreen(
                             },
                             colors = overlayActionButtonColors(),
                         ) {
-                            Text("キャンセル")
+                            Text(stringResource(R.string.action_cancel))
                         }
                         Button(
                             onClick = {
@@ -214,7 +216,7 @@ fun CalculatorScreen(
                             },
                             colors = overlayActionButtonColors(),
                         ) {
-                            Text("確認", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.action_confirm), fontWeight = FontWeight.Bold)
                         }
                     }
                 }

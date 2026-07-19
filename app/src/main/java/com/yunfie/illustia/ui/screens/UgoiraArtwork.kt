@@ -19,11 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.yunfie.illustia.models.pixiv.UgoiraPlayback
+import com.yunfie.illustia.R
 import com.yunfie.illustia.ui.components.LoadingIndicator
 import com.yunfie.illustia.ui.components.PixivImage
 import kotlinx.coroutines.Dispatchers
@@ -85,13 +87,16 @@ internal fun UgoiraArtwork(
                 }
             }
 
-            playback != null -> {
+            playback != null && playback.frames.isNotEmpty() -> {
                 val currentFrame = playback.frames[currentFrameIndex % playback.frames.size]
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
+                val frameRequest = remember(context, currentFrame.filePath) {
+                    ImageRequest.Builder(context)
                         .data(currentFrame.filePath)
                         .crossfade(false)
-                        .build(),
+                        .build()
+                }
+                AsyncImage(
+                    model = frameRequest,
                     contentDescription = contentDescription,
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier.fillMaxSize(),
@@ -120,7 +125,7 @@ internal fun UgoiraArtwork(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Ugoira load failed",
+                        text = stringResource(R.string.ugoira_load_failed),
                         color = MiuixTheme.colorScheme.onSurface,
                         style = MiuixTheme.textStyles.footnote1,
                     )

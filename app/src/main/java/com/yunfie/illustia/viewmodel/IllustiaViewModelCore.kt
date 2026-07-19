@@ -50,12 +50,14 @@ import java.io.IOException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -72,6 +74,23 @@ import com.yunfie.illustia.ui.screens.CalculatorEngine
 import com.yunfie.illustia.DummyAppIconSwitcher
 import java.io.File
 import java.io.FileOutputStream
+
+private data class SettingsPersistenceRequest(
+    val settings: AppSettings,
+    val notifyLiveWallpaper: Boolean,
+)
+
+private fun AppSettings.hasLiveWallpaperChangesComparedTo(other: AppSettings): Boolean {
+    return liveWallpaperSource != other.liveWallpaperSource ||
+        liveWallpaperSourceFolder != other.liveWallpaperSourceFolder ||
+        liveWallpaperChangeMode != other.liveWallpaperChangeMode ||
+        liveWallpaperIntervalMinutes != other.liveWallpaperIntervalMinutes ||
+        liveWallpaperOrder != other.liveWallpaperOrder ||
+        liveWallpaperScaleMode != other.liveWallpaperScaleMode ||
+        liveWallpaperBackground != other.liveWallpaperBackground ||
+        liveWallpaperCrossfade != other.liveWallpaperCrossfade ||
+        liveWallpaperExcludeSensitive != other.liveWallpaperExcludeSensitive
+}
 
 open class IllustiaViewModelCore(
     app: Application,
@@ -100,6 +119,8 @@ open class IllustiaViewModelCore(
     private var searchSnapshot: SearchSnapshot? = null
     private var userPageSnapshot: UserPageSnapshot? = null
     private var pendingNativeIntentEvent: NativeIntentEvent? = null
+    private val settingsUpdateLock = Any()
+    private val settingsPersistenceRequests = Channel<SettingsPersistenceRequest>(Channel.UNLIMITED)
 
     private companion object {
         val RECOMMENDED_TAG_CACHE_TTL_MILLIS = TimeUnit.MINUTES.toMillis(30)
@@ -123,11 +144,7 @@ open class IllustiaViewModelCore(
             .build()
     }
     private val _uiState = MutableStateFlow(IllustiaUiState())
-    val uiState: StateFlow<IllustiaUiState> = _uiState
-    val loadStateState: StateFlow<LoadState> = _uiState
-        .map { it.loadState }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.loadState)
+    val uiState: StateFlow<IllustiaUiState> = _uiState.asStateFlow()
 
     private fun str(resId: Int): String = getApplication<Application>().getString(resId)
     private fun str(resId: Int, vararg args: Any): String = getApplication<Application>().getString(resId, *args)
@@ -141,69 +158,11 @@ open class IllustiaViewModelCore(
         .map { it.appLocked }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.appLocked)
-    val homeItemsState: StateFlow<List<Illust>> = _uiState
-        .map { it.homeItems }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.homeItems)
-    val novelItemsState: StateFlow<List<NovelPreview>> = _uiState
-        .map { it.novelItems }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.novelItems)
-    val recommendedTagsState: StateFlow<List<String>> = _uiState
-        .map { it.recommendedTags }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.recommendedTags)
-    val searchItemsState: StateFlow<List<Illust>> = _uiState
-        .map { it.searchItems }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.searchItems)
-    val rankingItemsState: StateFlow<List<Illust>> = _uiState
-        .map { it.rankingItems }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.rankingItems)
-    val bookmarkItemsState: StateFlow<List<Illust>> = _uiState
-        .map { it.bookmarkItems }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.bookmarkItems)
-    val timelineItemsState: StateFlow<List<Illust>> = _uiState
-        .map { it.timelineItems }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.timelineItems)
-    val watchlistItemsState: StateFlow<List<Illust>> = _uiState
-        .map { it.watchlistItems }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.watchlistItems)
-    val followingUsersState: StateFlow<List<UserPreview>> = _uiState
-        .map { it.followingUsers }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _uiState.value.followingUsers)
-    val homeChromeState: StateFlow<HomeChromeState> = _uiState
-        .map { HomeChromeState(it.homeKind, it.homeNextUrl, it.timelineNextUrl) }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeChromeState())
-    val novelChromeState: StateFlow<NovelChromeState> = _uiState
-        .map { NovelChromeState(it.novelNextUrl) }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NovelChromeState())
-    val rankingChromeState: StateFlow<RankingChromeState> = _uiState
-        .map { RankingChromeState(it.rankingMode, it.rankingNextUrl) }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RankingChromeState())
-    val bookmarkChromeState: StateFlow<BookmarkChromeState> = _uiState
-        .map {
-            BookmarkChromeState(
-                bookmarkNextUrl = it.bookmarkNextUrl,
-                timelineNextUrl = it.timelineNextUrl,
-                watchlistNextUrl = it.watchlistNextUrl,
-                activeWatchlistTag = it.activeWatchlistTag,
-                followingUsersNextUrl = it.followingUsersNextUrl,
-                selectedTab = it.bookmarkSelectedTab,
-            )
-        }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BookmarkChromeState())
 
     init {
+        viewModelScope.launch(Dispatchers.IO) {
+            persistSettingsUpdates()
+        }
         viewModelScope.launch(Dispatchers.IO) {
             val settings = repository.readSettings()
             val normalizedSettings = if (settings.useDynamicColor && !isDynamicColorAvailable()) {
@@ -406,17 +365,7 @@ open class IllustiaViewModelCore(
 
     fun unlockApp(pin: String): Boolean {
         return if (settingsStore.verifyPin(pin)) {
-            _uiState.update { it.copy(appLocked = false) }
-            resumePendingNativeIntentIfReady()
-            viewModelScope.launch(Dispatchers.IO) {
-                val settings = _uiState.value.settings
-                if (settings.refreshToken.isNotBlank()) {
-                    refreshCurrentAccountProfile(settings)
-                    if (settings.startupScreen == "home" && _uiState.value.homeItems.isEmpty()) {
-                        refreshHome()
-                    }
-                }
-            }
+            resumeAfterUnlock()
             true
         } else {
             false
@@ -428,20 +377,14 @@ open class IllustiaViewModelCore(
     }
 
     fun confirmUnlock() {
-        _uiState.update { it.copy(appLocked = false) }
-        resumePendingNativeIntentIfReady()
-        viewModelScope.launch(Dispatchers.IO) {
-            val settings = _uiState.value.settings
-            if (settings.refreshToken.isNotBlank()) {
-                refreshCurrentAccountProfile(settings)
-                if (settings.startupScreen == "home" && _uiState.value.homeItems.isEmpty()) {
-                    refreshHome()
-                }
-            }
-        }
+        resumeAfterUnlock()
     }
 
     fun unlockWithBiometric() {
+        resumeAfterUnlock()
+    }
+
+    private fun resumeAfterUnlock() {
         _uiState.update { it.copy(appLocked = false) }
         resumePendingNativeIntentIfReady()
         viewModelScope.launch(Dispatchers.IO) {
@@ -977,7 +920,7 @@ open class IllustiaViewModelCore(
                 if (handleAuthExpired(error)) return@launch
                 _uiState.update {
                     if (it.selectedNovel?.id == novel.id) {
-                        it.copy(message = cleanErrorMessage(error, "小説を読み込めませんでした。"))
+                        it.copy(message = cleanErrorMessage(error, getApplication<Application>().getString(R.string.error_novel_load_failed)))
                     } else it
                 }
             }
@@ -2159,7 +2102,7 @@ open class IllustiaViewModelCore(
                 .onFailure { error ->
                     if (isCancellation(error)) throw error
                     _uiState.update {
-                        it.copy(notificationsLoading = false, message = cleanErrorMessage(error, "通知を取得できませんでした"))
+                        it.copy(notificationsLoading = false, message = cleanErrorMessage(error, getApplication<Application>().getString(R.string.error_notifications_load_failed)))
                     }
                 }
         }
@@ -2182,7 +2125,7 @@ open class IllustiaViewModelCore(
                 }
                 .onFailure { error ->
                     if (isCancellation(error)) throw error
-                    _uiState.update { it.copy(notificationsLoading = false, message = cleanErrorMessage(error, "通知を取得できませんでした")) }
+                    _uiState.update { it.copy(notificationsLoading = false, message = cleanErrorMessage(error, getApplication<Application>().getString(R.string.error_notifications_load_failed))) }
                 }
         }
     }
@@ -2198,7 +2141,7 @@ open class IllustiaViewModelCore(
                 }
                 .onFailure { error ->
                     if (isCancellation(error)) throw error
-                    showMessage(cleanErrorMessage(error, "通知を展開できませんでした"))
+                    showMessage(cleanErrorMessage(error, getApplication<Application>().getString(R.string.error_notification_open_failed)))
                 }
         }
     }
@@ -2684,25 +2627,41 @@ open class IllustiaViewModelCore(
     }
 
     private fun updateSettings(block: (AppSettings) -> AppSettings) {
-        val previous = _uiState.value.settings
-        val next = block(previous)
-        val liveWallpaperChanged =
-            previous.liveWallpaperSource != next.liveWallpaperSource ||
-                previous.liveWallpaperSourceFolder != next.liveWallpaperSourceFolder ||
-                previous.liveWallpaperChangeMode != next.liveWallpaperChangeMode ||
-                previous.liveWallpaperIntervalMinutes != next.liveWallpaperIntervalMinutes ||
-                previous.liveWallpaperOrder != next.liveWallpaperOrder ||
-                previous.liveWallpaperScaleMode != next.liveWallpaperScaleMode ||
-                previous.liveWallpaperBackground != next.liveWallpaperBackground ||
-                previous.liveWallpaperCrossfade != next.liveWallpaperCrossfade ||
-                previous.liveWallpaperExcludeSensitive != next.liveWallpaperExcludeSensitive
-        _uiState.update { it.withSettings(next) }
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.saveSettings(next)
-            if (liveWallpaperChanged) {
-                getApplication<Application>().sendBroadcast(
-                    Intent(com.yunfie.illustia.wallpaper.PalleriaLiveWallpaperService.ACTION_SETTINGS_CHANGED),
-                )
+        synchronized(settingsUpdateLock) {
+            lateinit var previous: AppSettings
+            lateinit var next: AppSettings
+            _uiState.update { state ->
+                previous = state.settings
+                next = block(previous)
+                if (next == previous) state else state.withSettings(next)
+            }
+            if (next != previous) {
+                check(
+                    settingsPersistenceRequests.trySend(
+                        SettingsPersistenceRequest(
+                            settings = next,
+                            notifyLiveWallpaper = previous.hasLiveWallpaperChangesComparedTo(next),
+                        ),
+                    ).isSuccess,
+                ) {
+                    "Settings persistence queue is unavailable"
+                }
+            }
+        }
+    }
+
+    private suspend fun persistSettingsUpdates() {
+        for (request in settingsPersistenceRequests) {
+            try {
+                repository.saveSettings(request.settings)
+                if (request.notifyLiveWallpaper) {
+                    getApplication<Application>().sendBroadcast(
+                        Intent(com.yunfie.illustia.wallpaper.PalleriaLiveWallpaperService.ACTION_SETTINGS_CHANGED),
+                    )
+                }
+            } catch (error: Throwable) {
+                if (isCancellation(error)) throw error
+                _uiState.update { it.copy(message = cleanErrorMessage(error)) }
             }
         }
     }
@@ -2747,6 +2706,7 @@ open class IllustiaViewModelCore(
     }
 
     override fun onCleared() {
+        settingsPersistenceRequests.close()
         searchJob?.cancel()
         detailExtrasJob?.cancel()
         loadingJob?.cancel()

@@ -55,9 +55,7 @@ internal fun SearchResultGrid(
     viewModel: IllustiaViewModel,
     onIllustSelected: ((Illust) -> Unit)? = null,
 ) {
-    val feedHighQuality = remember(state.settings.highQualityImages, state.settings.feedPreviewQuality) {
-        state.settings.highQualityImages && state.settings.feedPreviewQuality != "low"
-    }
+    val feedHighQuality = state.settings.useHighQualityFeedImages
     val showAiBadge = remember(state.settings.showAiBadge) { state.settings.showAiBadge }
     val prefetchUrls = remember(page, state.searchItems, feedHighQuality) {
         if (page == 0) {
