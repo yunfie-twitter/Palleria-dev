@@ -186,6 +186,16 @@
     <string name="download_queue_section_completed">ダウンロード完了</string>
     <string name="download_queue_section_failed">失敗</string>
     <string name="download_queue_empty">現在ダウンロード中の画像はありません。</string>
+    <string name="download_queue_overview_label">TRANSFER STATUS</string>
+    <string name="download_queue_active_now">件を処理中</string>
+    <string name="download_queue_slots">%1$d / %2$d スロット</string>
+    <string name="download_queue_clear">履歴を消去</string>
+    <string name="download_queue_clear_title">完了した履歴を消去しますか？</string>
+    <string name="download_queue_clear_summary">完了または失敗した項目を一覧から削除します。進行中のダウンロードには影響しません。</string>
+    <string name="download_queue_empty_all">ダウンロード履歴はまだありません</string>
+    <string name="download_queue_empty_completed">完了したダウンロードはありません</string>
+    <string name="download_queue_empty_failed">失敗したダウンロードはありません</string>
+    <string name="msg_download_history_cleared">完了したダウンロード履歴を消去しました</string>
     <string name="more_about">Palleria について</string>
     <string name="more_not_logged_in">未ログイン</string>
     <string name="more_logged_in_account">ログイン中アカウント</string>
@@ -679,4 +689,11 @@
     <string name="error_novel_load_failed">小説を読み込めませんでした。</string>
     <string name="error_notifications_load_failed">通知を取得できませんでした</string>
     <string name="error_notification_open_failed">通知を展開できませんでした</string>
+    <string name="tag_sheet_title">タグメニュー</string>
+    <string name="tag_sheet_caption">TAG QUICK ACTIONS</string>
+    <string name="tag_sheet_search">このタグで作品を探す</string>
+    <string name="tag_sheet_add_favorite">お気に入りに追加</string>
+    <string name="tag_sheet_remove_favorite">お気に入りから削除</string>
+    <string name="tag_sheet_mute">タグをミュート</string>
+    <string name="tag_sheet_unmute">ミュートを解除</string>
 </resources>

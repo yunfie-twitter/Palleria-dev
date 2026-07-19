@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -67,17 +68,18 @@ fun RankingScreen(
         initialPage = currentIndex,
         pageCount = { modes.size },
     )
+    val latestMode by rememberUpdatedState(mode)
 
     // Commit a ranking change only after the swipe/scroll animation settles. This
     // avoids loading every intermediate tab when jumping across several modes.
-    LaunchedEffect(pagerState, mode) {
+    LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.isScrollInProgress to pagerState.settledPage }
             .filter { (isScrolling, _) -> !isScrolling }
             .map { (_, page) -> page }
             .distinctUntilChanged()
             .collect { page ->
                 val newMode = modes[page]
-                if (newMode != mode) viewModel.selectRankingMode(newMode)
+                if (newMode != latestMode) viewModel.selectRankingMode(newMode)
             }
     }
 
@@ -140,9 +142,8 @@ fun RankingScreen(
                         ),
                         selectedTabIndex = modes.indexOf(modes[pagerState.targetPage]).coerceAtLeast(0),
                         onTabSelected = { index ->
-                            val newMode = modes.getOrNull(index) ?: return@TabRow
+                            if (modes.getOrNull(index) == null) return@TabRow
                             coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                            if (newMode != mode) viewModel.selectRankingMode(newMode)
                         },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
                         minWidth = 92.dp,
@@ -167,7 +168,7 @@ fun RankingScreen(
                     items = items,
                     loadState = loadState,
                     nextUrl = nextUrl,
-                    mode = mode,
+                    mode = modes[page],
                     settings = settings,
                     viewModel = viewModel,
                     scrollBehavior = scrollBehavior,
@@ -227,7 +228,7 @@ private fun RankingGridContent(
 ) {
     val feedHighQuality = settings.useHighQualityFeedImages
     val showAiBadge = remember(settings.showAiBadge) { settings.showAiBadge }
-    val gridState = viewModel.rankingGridState
+    val gridState = viewModel.rankingGridState(mode)
     val prefetchUrls = remember(items, feedHighQuality) {
         items.asSequence()
             .take(16)

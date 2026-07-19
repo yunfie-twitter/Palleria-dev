@@ -160,6 +160,16 @@
     <string name="download_queue_section_completed">已完成</string>
     <string name="download_queue_section_failed">失敗</string>
     <string name="download_queue_empty">目前沒有正在下載圖像。</string>
+    <string name="download_queue_overview_label">傳輸狀態</string>
+    <string name="download_queue_active_now">項正在處理</string>
+    <string name="download_queue_slots">%1$d / %2$d 個任務槽</string>
+    <string name="download_queue_clear">清除記錄</string>
+    <string name="download_queue_clear_title">清除已結束的記錄？</string>
+    <string name="download_queue_clear_summary">從列表移除已完成和失敗的項目，不會影響進行中的下載。</string>
+    <string name="download_queue_empty_all">尚無下載記錄</string>
+    <string name="download_queue_empty_completed">尚無已完成的下載</string>
+    <string name="download_queue_empty_failed">尚無失敗的下載</string>
+    <string name="msg_download_history_cleared">已清除結束的下載記錄</string>
     <string name="more_about">關於Palleria</string>
     <string name="more_not_logged_in">未登入</string>
     <string name="more_logged_in_account">登入帳戶</string>
@@ -621,4 +631,11 @@
     <string name="error_novel_load_failed">無法載入小說。</string>
     <string name="error_notifications_load_failed">無法載入通知。</string>
     <string name="error_notification_open_failed">無法開啟通知。</string>
+    <string name="tag_sheet_title">標籤選單</string>
+    <string name="tag_sheet_caption">標籤快速操作</string>
+    <string name="tag_sheet_search">尋找此標籤的作品</string>
+    <string name="tag_sheet_add_favorite">加入收藏標籤</string>
+    <string name="tag_sheet_remove_favorite">從收藏標籤移除</string>
+    <string name="tag_sheet_mute">封鎖標籤</string>
+    <string name="tag_sheet_unmute">取消封鎖</string>
 </resources>

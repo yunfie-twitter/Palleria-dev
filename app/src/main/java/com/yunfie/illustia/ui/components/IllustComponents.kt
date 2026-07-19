@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -497,15 +498,35 @@ fun IllustGrid(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TagTile(tag: String, imageUrl: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun TagTile(
+    tag: String,
+    imageUrl: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val hapticMode = LocalAppHapticMode.current
     Card(
-        modifier = modifier.aspectRatio(1f),
+        modifier = modifier
+            .aspectRatio(1f)
+            .combinedClickable(
+                onClick = onClick,
+                role = Role.Button,
+                onLongClick = onLongClick?.let { longClick ->
+                    {
+                        performAppHapticFeedback(context, haptic, hapticMode)
+                        longClick()
+                    }
+                },
+            ),
         cornerRadius = 14.dp,
         insideMargin = PaddingValues(0.dp),
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer, contentColor = MiuixTheme.colorScheme.onBackground),
         pressFeedbackType = PressFeedbackType.Sink,
-        onClick = onClick,
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
             if (imageUrl != null) {

@@ -134,7 +134,7 @@ open class IllustiaViewModelCore(
     val homeTimelineGridState = LazyGridState()
     val searchResultGridState = LazyGridState()
     val searchBrowseGridState = LazyGridState()
-    val rankingGridState = LazyGridState()
+    private val rankingGridStates = mutableMapOf<String, LazyGridState>()
     private val userProfileGridStates = mutableMapOf<Long, LazyGridState>()
     private val downloadClient: OkHttpClient by lazy {
         (getApplication<Application>() as IllustiaApplication).sharedHttpClient.newBuilder()
@@ -355,6 +355,10 @@ open class IllustiaViewModelCore(
 
     fun userProfileGridState(userId: Long): LazyGridState {
         return userProfileGridStates.getOrPut(userId) { LazyGridState() }
+    }
+
+    fun rankingGridState(mode: String): LazyGridState {
+        return rankingGridStates.getOrPut(mode) { LazyGridState() }
     }
 
     fun updateSaveViewHistory(value: Boolean) {
@@ -1483,7 +1487,7 @@ open class IllustiaViewModelCore(
     }
 
     fun onIllustLongPress(illust: Illust) {
-        _uiState.update { it.copy(longPressedIllust = illust) }
+        _uiState.update { it.copy(longPressedIllust = illust, longPressedTag = null) }
     }
 
     fun onIllustLongPress(illustId: Long, fallback: Illust? = null) {
@@ -1493,6 +1497,24 @@ open class IllustiaViewModelCore(
 
     fun closeIllustOptions() {
         _uiState.update { it.copy(longPressedIllust = null) }
+    }
+
+    fun openTagOptions(rawTag: String, imageUrl: String? = null) {
+        val tag = rawTag.trim().removePrefix("#").trim()
+        if (tag.isBlank()) return
+        _uiState.update {
+            it.copy(
+                longPressedIllust = null,
+                longPressedTag = TagPreview(
+                    tag = tag,
+                    imageUrl = imageUrl?.takeIf(String::isNotBlank),
+                ),
+            )
+        }
+    }
+
+    fun closeTagOptions() {
+        _uiState.update { it.copy(longPressedTag = null) }
     }
 
     fun openUser(user: UserPreview) {
@@ -1859,6 +1881,18 @@ open class IllustiaViewModelCore(
 
     fun openDownloadQueue() {
         _navigationRequests.tryEmit(IllustiaNavigationRequest.DownloadQueue)
+    }
+
+    fun clearFinishedDownloads() {
+        _uiState.update { state ->
+            state.copy(
+                downloadQueue = state.downloadQueue.filter {
+                    it.status == DownloadQueueStatus.Waiting ||
+                        it.status == DownloadQueueStatus.Downloading
+                },
+                message = str(R.string.msg_download_history_cleared),
+            )
+        }
     }
 
     fun loadSavedLibrary() {

@@ -73,6 +73,7 @@ data class IllustiaUiState(
     val imageViewerStartPage: Int = 0,
     val imageViewerCurrentPage: Int = 0,
     val longPressedIllust: Illust? = null,
+    val longPressedTag: TagPreview? = null,
     val webLoginRequest: PixivWebLoginRequest? = null,
     val showReloginRequiredDialog: Boolean = false,
     val pendingBookmarkRemoval: Illust? = null,
@@ -100,6 +101,12 @@ data class CalculatorHistoryEntry(
 
 @Immutable
 data class RecommendedTagTile(
+    val tag: String,
+    val imageUrl: String? = null,
+)
+
+@Immutable
+data class TagPreview(
     val tag: String,
     val imageUrl: String? = null,
 )

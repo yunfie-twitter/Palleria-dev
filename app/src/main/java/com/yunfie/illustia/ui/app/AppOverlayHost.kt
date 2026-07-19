@@ -15,6 +15,7 @@ import com.yunfie.illustia.ui.components.LocalBottomSheetBackgroundColor
 import com.yunfie.illustia.ui.components.LoadingIndicator
 import com.yunfie.illustia.ui.components.MiuixConfirmDialog
 import com.yunfie.illustia.ui.components.NonAmoledDarkTheme
+import com.yunfie.illustia.ui.components.TagPreviewBottomSheet
 import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import com.yunfie.illustia.ui.screens.CommentScreen
 import com.yunfie.illustia.ui.screens.RefreshTokenLoginBottomSheet
@@ -43,6 +44,7 @@ internal fun AppOverlayHost(
     onDismissTokenLogin: () -> Unit,
     selectedCommentTarget: Pair<Long, com.yunfie.illustia.data.pixiv.CommentArtworkType>?,
     onDismissComments: () -> Unit,
+    onSearchTag: (String) -> Unit,
 ) {
     val configuration = LocalConfiguration.current
 
@@ -134,6 +136,34 @@ internal fun AppOverlayHost(
                 }
             }
         }
+    }
+
+    appState.state.longPressedTag?.let { preview ->
+        val isFavorite = appState.settings.favoriteTags.any {
+            it.equals(preview.tag, ignoreCase = true)
+        }
+        val isMuted = appState.settings.mutedTags.any {
+            it.equals(preview.tag, ignoreCase = true)
+        }
+        TagPreviewBottomSheet(
+            preview = preview,
+            isFavorite = isFavorite,
+            isMuted = isMuted,
+            onDismiss = viewModel::closeTagOptions,
+            onSearch = {
+                viewModel.closeTagOptions()
+                onSearchTag(preview.tag)
+            },
+            onToggleFavorite = {
+                viewModel.closeTagOptions()
+                viewModel.toggleFavoriteTag(preview.tag)
+            },
+            onToggleMute = {
+                viewModel.closeTagOptions()
+                if (isMuted) viewModel.unmuteTag(preview.tag)
+                else viewModel.muteTag(preview.tag)
+            },
+        )
     }
 
     appState.state.selectedUser?.let { user ->

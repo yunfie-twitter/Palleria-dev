@@ -58,6 +58,7 @@ internal fun IllustDetailInfo(
     onToggleFollow: () -> Unit,
     onUnmuteUser: () -> Unit,
     onSearchTag: (String) -> Unit,
+    onLongPressTag: (String) -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
     var followAnimationTrigger by remember(illust.artistId) { mutableIntStateOf(0) }
@@ -166,6 +167,7 @@ internal fun IllustDetailInfo(
                 values = illust.tags.take(12),
                 label = { "#$it" },
                 onClick = onSearchTag,
+                onLongClick = onLongPressTag,
             )
         }
 

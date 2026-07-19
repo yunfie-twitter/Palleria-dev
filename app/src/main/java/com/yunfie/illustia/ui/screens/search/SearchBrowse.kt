@@ -117,6 +117,12 @@ internal fun BrowseArea(
                                 tag = tag.tag,
                                 imageUrl = tag.imageUrl,
                                 onClick = { viewModel.submitSearch(tag.tag.removePrefix("#")) },
+                                onLongClick = {
+                                    viewModel.openTagOptions(
+                                        rawTag = tag.tag,
+                                        imageUrl = tag.imageUrl,
+                                    )
+                                },
                                 modifier = Modifier.weight(1f),
                             )
                         }

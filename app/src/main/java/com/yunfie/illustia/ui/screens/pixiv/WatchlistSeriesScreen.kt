@@ -34,7 +34,10 @@ import com.yunfie.illustia.models.pixiv.MangaSeriesModel
 import com.yunfie.illustia.ui.components.AutoLoadMoreEffect
 import com.yunfie.illustia.ui.components.EmptyState
 import com.yunfie.illustia.ui.components.PixivImage
-import com.yunfie.illustia.ui.components.adaptiveIllustColumns
+import com.yunfie.illustia.ui.components.ProfileGridColumnCount
+import com.yunfie.illustia.ui.components.ProfileGridHorizontalSpacing
+import com.yunfie.illustia.ui.components.ProfileGridVerticalSpacing
+import com.yunfie.illustia.ui.components.profileGridContentPadding
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
@@ -104,19 +107,16 @@ fun WatchlistSeriesScreen(
             val gridState = rememberLazyGridState()
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Fixed(adaptiveIllustColumns(settings)),
+                columns = GridCells.Fixed(ProfileGridColumnCount),
                 modifier = Modifier
                     .fillMaxSize()
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .background(MiuixTheme.colorScheme.surface),
-                contentPadding = PaddingValues(
-                    start = 14.dp,
-                    end = 14.dp,
+                contentPadding = profileGridContentPadding(
                     top = scaffoldPadding.calculateTopPadding() + 8.dp,
-                    bottom = 24.dp,
                 ),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(ProfileGridHorizontalSpacing),
+                verticalArrangement = Arrangement.spacedBy(ProfileGridVerticalSpacing),
             ) {
                 if (state.isLoading && state.mangaSeries.isEmpty()) {
                     gridItems(List(6) { it }, contentType = { "watchlist_series_skeleton" }) {
@@ -138,6 +138,7 @@ fun WatchlistSeriesScreen(
                     WatchlistSeriesCard(
                         series = series,
                         onClick = { onOpenSeries(series.id) },
+                        modifier = Modifier.animateItem(),
                     )
                 }
                 if (!settings.autoLoadMore && state.model?.nextUrl != null) {
@@ -159,9 +160,10 @@ fun WatchlistSeriesScreen(
 private fun WatchlistSeriesCard(
     series: MangaSeriesModel,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 180.dp),
         cornerRadius = 16.dp,

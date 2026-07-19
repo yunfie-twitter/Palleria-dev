@@ -457,11 +457,11 @@ private fun UserIllustGridPage(
 ) {
     LazyVerticalGrid(
         state = gridState,
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(ProfileGridColumnCount),
         modifier = Modifier.fillMaxSize().background(backgroundColor),
-        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 96.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        contentPadding = profileGridContentPadding(),
+        horizontalArrangement = Arrangement.spacedBy(ProfileGridHorizontalSpacing),
+        verticalArrangement = Arrangement.spacedBy(ProfileGridVerticalSpacing),
     ) {
         items(illusts, key = { "${keyPrefix}_${it.id}" }, contentType = { "illust_card" }) { illust ->
             IllustCard(

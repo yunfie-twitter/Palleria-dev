@@ -44,7 +44,11 @@ import com.yunfie.illustia.ui.components.LoadingIndicator
 import com.yunfie.illustia.ui.components.MainNavigationContentPadding
 import com.yunfie.illustia.ui.components.PixivImage
 import com.yunfie.illustia.ui.components.StateBanner
+import com.yunfie.illustia.ui.components.ProfileGridColumnCount
+import com.yunfie.illustia.ui.components.ProfileGridHorizontalSpacing
+import com.yunfie.illustia.ui.components.ProfileGridVerticalSpacing
 import com.yunfie.illustia.ui.components.adaptiveIllustColumns
+import com.yunfie.illustia.ui.components.profileGridContentPadding
 import com.yunfie.illustia.ui.components.miuixClickable
 import com.yunfie.illustia.ui.components.overlayActionButtonColors
 import kotlinx.coroutines.launch
@@ -88,11 +92,14 @@ internal fun BookmarkWatchlistTab(
         )
         LazyVerticalGrid(
             state = gridState,
-            columns = GridCells.Fixed(adaptiveIllustColumns(settings)),
+            columns = GridCells.Fixed(ProfileGridColumnCount),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = profileGridContentPadding(
+                top = 8.dp,
+                bottom = MainNavigationContentPadding,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(ProfileGridHorizontalSpacing),
+            verticalArrangement = Arrangement.spacedBy(ProfileGridVerticalSpacing),
         ) {
             if (watchlistState.isLoading && watchlistState.mangaSeries.isEmpty()) {
                 gridItems(List(6) { it }, contentType = { "watchlist_series_skeleton" }) {
@@ -114,6 +121,7 @@ internal fun BookmarkWatchlistTab(
                 WatchlistSeriesCard(
                     series = series,
                     onClick = { onOpenWatchlistSeries(series.id) },
+                    modifier = Modifier.animateItem(),
                 )
             }
             if (!settings.autoLoadMore && watchlistState.model?.nextUrl != null) {
@@ -135,9 +143,10 @@ internal fun BookmarkWatchlistTab(
 private fun WatchlistSeriesCard(
     series: MangaSeriesModel,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 180.dp),
         cornerRadius = 16.dp,

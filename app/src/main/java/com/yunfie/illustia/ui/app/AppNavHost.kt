@@ -162,6 +162,14 @@ internal fun AppNavHost(
                     },
                     onOpenImage = { page -> viewModel.openImageViewer(illust, page) },
                     onSearchTag = onSearchTag,
+                    onLongPressTag = { tag ->
+                        viewModel.openTagOptions(
+                            rawTag = tag,
+                            imageUrl = illust.squareImageUrl.ifBlank {
+                                illust.thumbnailUrl.ifBlank { illust.imageUrl }
+                            },
+                        )
+                    },
                     isArtistFollowed = detail.user?.isFollowed == true,
                     isArtistMuted = appState.state.settings.mutedUsers.contains(illust.artistId),
                     isTagMuted = illust.isMutedByTags(appState.state.settings),
@@ -396,6 +404,7 @@ internal fun AppNavHost(
         onDismissTokenLogin = { onShowTokenLoginChange(false) },
         selectedCommentTarget = selectedCommentTarget,
         onDismissComments = { onSelectedCommentTargetChange(null) },
+        onSearchTag = onSearchTag,
     )
 }
 

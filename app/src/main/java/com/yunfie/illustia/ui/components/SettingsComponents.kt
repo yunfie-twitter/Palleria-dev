@@ -1,5 +1,7 @@
 package com.yunfie.illustia.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -12,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
@@ -36,6 +40,7 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 @Composable
 fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
@@ -299,22 +304,48 @@ fun <T> ChoiceRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun <T> FlowButtons(values: List<T>, label: (T) -> String, onClick: (T) -> Unit) {
+fun <T> FlowButtons(
+    values: List<T>,
+    label: (T) -> String,
+    onClick: (T) -> Unit,
+    onLongClick: ((T) -> Unit)? = null,
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val hapticMode = LocalAppHapticMode.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         values.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 row.forEach { value ->
-                    Button(
-                        onClick = { onClick(value) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .combinedClickable(
+                                onClick = { onClick(value) },
+                                role = Role.Button,
+                                onLongClick = onLongClick?.let { longClick ->
+                                    {
+                                        performAppHapticFeedback(context, haptic, hapticMode)
+                                        longClick(value)
+                                    }
+                                },
+                            ),
+                        cornerRadius = 16.dp,
+                        insideMargin = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                        colors = CardDefaults.defaultColors(
                             color = MiuixTheme.colorScheme.surfaceContainer,
                             contentColor = MiuixTheme.colorScheme.onSurface,
                         ),
-                        insideMargin = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                        pressFeedbackType = PressFeedbackType.Sink,
                     ) {
-                        Text(label(value), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        androidx.compose.foundation.layout.Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(label(value), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
                 repeat(3 - row.size) {

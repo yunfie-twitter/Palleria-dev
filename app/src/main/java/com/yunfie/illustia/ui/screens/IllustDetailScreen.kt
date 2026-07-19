@@ -85,6 +85,7 @@ fun IllustDetailScreen(
     onOpenSeries: (() -> Unit)? = null,
     onOpenImage: (Int) -> Unit,
     onSearchTag: (String) -> Unit,
+    onLongPressTag: (String) -> Unit,
     isArtistFollowed: Boolean,
     isArtistMuted: Boolean,
     isTagMuted: Boolean,
@@ -263,6 +264,7 @@ fun IllustDetailScreen(
                     },
                     onUnmuteUser = onUnmuteUser,
                     onSearchTag = onSearchTag,
+                    onLongPressTag = onLongPressTag,
                 )
             }
             

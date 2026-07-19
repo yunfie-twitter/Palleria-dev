@@ -181,6 +181,16 @@
     <string name="download_queue_section_completed">Completed</string>
     <string name="download_queue_section_failed">Failed</string>
     <string name="download_queue_empty">No images are downloading right now.</string>
+    <string name="download_queue_overview_label">TRANSFER STATUS</string>
+    <string name="download_queue_active_now">active now</string>
+    <string name="download_queue_slots">%1$d / %2$d slots</string>
+    <string name="download_queue_clear">Clear history</string>
+    <string name="download_queue_clear_title">Clear finished history?</string>
+    <string name="download_queue_clear_summary">Removes completed and failed items from this list. Active downloads will not be affected.</string>
+    <string name="download_queue_empty_all">No download history yet</string>
+    <string name="download_queue_empty_completed">No completed downloads</string>
+    <string name="download_queue_empty_failed">No failed downloads</string>
+    <string name="msg_download_history_cleared">Finished download history cleared</string>
     <string name="more_about">About Palleria</string>
     <string name="more_not_logged_in">Not Logged In</string>
     <string name="more_logged_in_account">Logged In Account</string>
@@ -679,4 +689,11 @@
     <string name="error_novel_load_failed">Could not load the novel.</string>
     <string name="error_notifications_load_failed">Could not load notifications.</string>
     <string name="error_notification_open_failed">Could not open the notification.</string>
+    <string name="tag_sheet_title">Tag menu</string>
+    <string name="tag_sheet_caption">TAG QUICK ACTIONS</string>
+    <string name="tag_sheet_search">Find works with this tag</string>
+    <string name="tag_sheet_add_favorite">Add to favorites</string>
+    <string name="tag_sheet_remove_favorite">Remove favorite</string>
+    <string name="tag_sheet_mute">Mute tag</string>
+    <string name="tag_sheet_unmute">Unmute tag</string>
 </resources>

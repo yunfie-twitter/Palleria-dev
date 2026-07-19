@@ -47,8 +47,11 @@ import com.yunfie.illustia.ui.components.IllustCard
 import com.yunfie.illustia.ui.components.IllustCardSkeleton
 import com.yunfie.illustia.ui.components.PixivImage
 import com.yunfie.illustia.ui.components.PrefetchPixivImages
-import com.yunfie.illustia.ui.components.adaptiveIllustColumns
 import com.yunfie.illustia.ui.components.overlayActionButtonColors
+import com.yunfie.illustia.ui.components.ProfileGridColumnCount
+import com.yunfie.illustia.ui.components.ProfileGridHorizontalSpacing
+import com.yunfie.illustia.ui.components.ProfileGridVerticalSpacing
+import com.yunfie.illustia.ui.components.profileGridContentPadding
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -104,16 +107,11 @@ fun IllustSeriesScreen(
     ) {
         LazyVerticalGrid(
             state = gridState,
-            columns = GridCells.Fixed(adaptiveIllustColumns(settings)),
+            columns = GridCells.Fixed(ProfileGridColumnCount),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 14.dp,
-                end = 14.dp,
-                top = 0.dp,
-                bottom = 24.dp,
-            ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = profileGridContentPadding(top = 0.dp),
+            horizontalArrangement = Arrangement.spacedBy(ProfileGridHorizontalSpacing),
+            verticalArrangement = Arrangement.spacedBy(ProfileGridVerticalSpacing),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SeriesHeader(
@@ -160,6 +158,7 @@ fun IllustSeriesScreen(
                     onBookmark = onBookmark,
                     onClick = onClick,
                     onLongClick = onLongClick,
+                    modifier = Modifier.animateItem(),
                     highQualityImages = feedHighQuality,
                     showAiBadge = showAiBadge,
                 )
