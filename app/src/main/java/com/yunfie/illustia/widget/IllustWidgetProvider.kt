@@ -20,7 +20,10 @@ import android.widget.RemoteViews
 import android.widget.RemoteViews.RemoteResponse
 import com.yunfie.illustia.MainActivity
 import com.yunfie.illustia.R
+import com.yunfie.illustia.settings.SettingsStore
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 
 class IllustWidgetProvider : AppWidgetProvider() {
     override fun onEnabled(context: Context) {
@@ -75,6 +78,10 @@ class IllustWidgetProvider : AppWidgetProvider() {
 
         private fun buildPreview(context: Context): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.illust_widget)
+            if (isPrivacyModeEnabled(context)) {
+                bindEmpty(context, views, 0)
+                return views
+            }
             val selection = IllustWidgetStore(context).loadAny()
             if (selection == null) {
                 bindEmpty(context, views, 0)
@@ -87,6 +94,10 @@ class IllustWidgetProvider : AppWidgetProvider() {
         fun updateWidget(context: Context, manager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.illust_widget)
             runCatching {
+                if (isPrivacyModeEnabled(context)) {
+                    bindEmpty(context, views, appWidgetId)
+                    return@runCatching
+                }
                 val store = IllustWidgetStore(context)
                 val selection = store.load(appWidgetId)
                 if (selection == null) {
@@ -105,6 +116,11 @@ class IllustWidgetProvider : AppWidgetProvider() {
                 manager.updateAppWidget(appWidgetId, fallback)
             }
         }
+
+        private fun isPrivacyModeEnabled(context: Context): Boolean =
+            runBlocking(Dispatchers.IO) {
+                SettingsStore(context.applicationContext).read().privacyModeEnabled
+            }
 
         private fun bindEmpty(context: Context, views: RemoteViews, appWidgetId: Int) {
             views.setViewVisibility(R.id.widget_empty_state, View.VISIBLE)

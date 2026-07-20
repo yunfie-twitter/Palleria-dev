@@ -363,16 +363,6 @@ fun AppLockScreen(
                 ) {
                     Text(stringResource(R.string.app_lock_recovery_verify))
                 }
-                Button(
-                    onClick = {
-                        showRecoverySheet = false
-                        viewModel.resetAppLockData()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = overlayActionButtonColors(),
-                ) {
-                    Text(stringResource(R.string.app_lock_recovery_reset), color = MiuixTheme.colorScheme.error)
-                }
             }
         }
     }

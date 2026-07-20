@@ -2,7 +2,7 @@ mod oauth;
 
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::{Mutex, OnceLock};
@@ -15,11 +15,13 @@ use crate::config::{ECH_HOSTS, ECH_IPS};
 use crate::error::{ApiError, http_error, network_error};
 use crate::headers::PixivHeaders;
 use crate::models::{
-    ApiResponse, IllustPage, IllustPageResponse, LoginSession, UgoiraFrame, UgoiraPlayback,
+    ApiResponse, Illust, IllustDetailResponse, IllustPage, IllustPageResponse, LoginSession,
+    UgoiraFrame, UgoiraPlayback, UserDetailResponse, UserProfile,
 };
 use crate::ugoira;
 
 static UGOIRA_DOWNLOAD_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+const MAX_UGOIRA_ARCHIVE_BYTES: u64 = 512 * 1024 * 1024;
 
 #[derive(uniffi::Object)]
 pub struct PixivHttpClient {
@@ -43,11 +45,6 @@ impl PixivHttpClient {
             .pool_idle_timeout(Duration::from_secs(300))
             .tcp_keepalive(Duration::from_secs(60));
 
-        if network_mode != "standard" {
-            builder = builder
-                .danger_accept_invalid_certs(true)
-                .danger_accept_invalid_hostnames(true);
-        }
         if network_mode == "ech" {
             for host in ECH_HOSTS {
                 for ip in ECH_IPS {
@@ -157,6 +154,42 @@ impl PixivHttpClient {
             })
     }
 
+    pub fn execute_illust_detail(
+        &self,
+        method: String,
+        url: String,
+        headers: HashMap<String, String>,
+        body: Vec<u8>,
+        content_type: Option<String>,
+    ) -> Result<Illust, ApiError> {
+        let response = self.execute(method, url, headers, body, content_type)?;
+        serde_json::from_str::<IllustDetailResponse>(&response.body)
+            .map_err(|error| ApiError::InvalidRequest {
+                detail: format!("invalid illust detail response: {error}"),
+            })?
+            .into_illust()
+            .ok_or_else(|| ApiError::InvalidRequest {
+                detail: "illust detail response does not contain a valid illust".into(),
+            })
+    }
+
+    pub fn execute_user_profile(
+        &self,
+        method: String,
+        url: String,
+        headers: HashMap<String, String>,
+        body: Vec<u8>,
+        content_type: Option<String>,
+        fallback_user_id: i64,
+    ) -> Result<UserProfile, ApiError> {
+        let response = self.execute(method, url, headers, body, content_type)?;
+        serde_json::from_str::<UserDetailResponse>(&response.body)
+            .map(|value| value.into_profile(fallback_user_id))
+            .map_err(|error| ApiError::InvalidRequest {
+                detail: format!("invalid user detail response: {error}"),
+            })
+    }
+
     pub fn prepare_ugoira(
         &self,
         url: String,
@@ -207,14 +240,36 @@ impl PixivHttpClient {
         fs::create_dir_all(parent).map_err(file_error)?;
         let zip_path = cache_dir.with_extension("zip.download");
         let result = (|| {
+            if response
+                .content_length()
+                .is_some_and(|length| length > MAX_UGOIRA_ARCHIVE_BYTES)
+            {
+                return Err(ApiError::InvalidRequest {
+                    detail: "ugoira archive exceeds the download limit".into(),
+                });
+            }
             let mut output = File::create(&zip_path).map_err(file_error)?;
-            response.copy_to(&mut output).map_err(network_error)?;
+            copy_with_limit(&mut response, &mut output, MAX_UGOIRA_ARCHIVE_BYTES)?;
             output.flush().map_err(file_error)?;
             ugoira::prepare(&zip_path, cache_dir, frames)
         })();
         let _ = fs::remove_file(zip_path);
         result
     }
+}
+
+fn copy_with_limit(
+    reader: &mut impl Read,
+    writer: &mut impl Write,
+    limit: u64,
+) -> Result<u64, ApiError> {
+    let copied = std::io::copy(&mut reader.take(limit + 1), writer).map_err(file_error)?;
+    if copied > limit {
+        return Err(ApiError::InvalidRequest {
+            detail: "ugoira archive exceeds the download limit".into(),
+        });
+    }
+    Ok(copied)
 }
 
 fn file_error(error: std::io::Error) -> ApiError {
@@ -226,6 +281,7 @@ fn file_error(error: std::io::Error) -> ApiError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
     use std::thread;
 
     fn client() -> PixivHttpClient {
@@ -281,6 +337,32 @@ mod tests {
     }
 
     #[test]
+    fn copies_a_response_within_the_archive_limit() {
+        let mut input = Cursor::new(b"ugoira".to_vec());
+        let mut output = Vec::new();
+
+        let copied = copy_with_limit(&mut input, &mut output, 6).unwrap();
+
+        assert_eq!(copied, 6);
+        assert_eq!(output, b"ugoira");
+    }
+
+    #[test]
+    fn rejects_a_response_that_exceeds_the_archive_limit() {
+        let mut input = Cursor::new(b"oversized".to_vec());
+        let mut output = Vec::new();
+
+        let error = copy_with_limit(&mut input, &mut output, 4).unwrap_err();
+
+        assert!(matches!(
+            error,
+            ApiError::InvalidRequest { detail }
+                if detail == "ugoira archive exceeds the download limit"
+        ));
+        assert_eq!(output.len(), 5);
+    }
+
+    #[test]
     fn parses_illust_page_before_crossing_the_ffi_boundary() {
         let response = client()
             .execute_illust_page(
@@ -293,5 +375,35 @@ mod tests {
             .unwrap();
         assert_eq!(response.items.len(), 1);
         assert_eq!(response.items[0].id, 1);
+    }
+
+    #[test]
+    fn parses_illust_detail_before_crossing_the_ffi_boundary() {
+        let response = client()
+            .execute_illust_detail(
+                "GET".into(),
+                server(200, r#"{"illust":{"id":7}}"#),
+                HashMap::new(),
+                vec![],
+                None,
+            )
+            .unwrap();
+        assert_eq!(response.id, 7);
+    }
+
+    #[test]
+    fn parses_user_profile_before_crossing_the_ffi_boundary() {
+        let response = client()
+            .execute_user_profile(
+                "GET".into(),
+                server(200, r#"{"user":{"name":"artist"},"profile":{}}"#),
+                HashMap::new(),
+                vec![],
+                None,
+                8,
+            )
+            .unwrap();
+        assert_eq!(response.id, 8);
+        assert_eq!(response.name, "artist");
     }
 }

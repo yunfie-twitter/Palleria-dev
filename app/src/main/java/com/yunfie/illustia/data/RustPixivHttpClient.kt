@@ -5,6 +5,7 @@ import com.yunfie.illustia.models.NetworkMode
 import com.yunfie.illustia.models.Illust
 import com.yunfie.illustia.models.PageResult
 import com.yunfie.illustia.models.PixivSession
+import com.yunfie.illustia.models.UserProfile
 import com.yunfie.illustia.models.pixiv.IllustSeries
 import com.yunfie.illustia.models.pixiv.UgoiraFrame
 import com.yunfie.illustia.models.pixiv.UgoiraPlayback
@@ -117,6 +118,33 @@ internal class RustPixivCall(
         }
     }
 
+    suspend fun awaitIllustDetail(): Illust = withContext(Dispatchers.IO) {
+        val nativeRequest = lowerRequest()
+        nativeCall {
+            native.executeIllustDetail(
+                method = nativeRequest.method,
+                url = nativeRequest.url,
+                headers = nativeRequest.headers,
+                body = nativeRequest.body,
+                contentType = nativeRequest.contentType,
+            ).toAppModel()
+        }
+    }
+
+    suspend fun awaitUserProfile(fallbackUserId: Long): UserProfile = withContext(Dispatchers.IO) {
+        val nativeRequest = lowerRequest()
+        nativeCall {
+            native.executeUserProfile(
+                method = nativeRequest.method,
+                url = nativeRequest.url,
+                headers = nativeRequest.headers,
+                body = nativeRequest.body,
+                contentType = nativeRequest.contentType,
+                fallbackUserId = fallbackUserId,
+            ).toAppModel()
+        }
+    }
+
     private fun lowerRequest(): NativeRequest {
         val sink = ByteArrayOutputStream()
         request.body?.let { body ->
@@ -165,6 +193,16 @@ private fun com.yunfie.illustia.rust.Illust.toAppModel(): Illust = Illust(
     isBookmarked = isBookmarked,
     totalComments = totalComments,
     series = series?.let { IllustSeries(id = it.id, title = it.title) },
+)
+
+private fun com.yunfie.illustia.rust.UserProfile.toAppModel(): UserProfile = UserProfile(
+    id = id,
+    name = name,
+    account = account,
+    profileImageUrl = profileImageUrl,
+    backgroundImageUrl = backgroundImageUrl,
+    comment = comment,
+    isFollowed = isFollowed,
 )
 
 private inline fun <T> nativeCall(block: () -> T): T = try {

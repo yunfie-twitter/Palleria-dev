@@ -1,17 +1,11 @@
 package com.yunfie.illustia.nativebridge
 
-import android.content.Intent
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
 class NativeIntentRouterTest : FunSpec({
-    test("process text becomes a tag search without the leading hash") {
-        val intent = Intent(Intent.ACTION_PROCESS_TEXT).apply {
-            putExtra(Intent.EXTRA_PROCESS_TEXT, "  #初音ミク  ")
-            putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, true)
-        }
-
-        NativeIntentRouter.parse(intent) shouldBe NativeIntentEvent.Text("初音ミク")
+    test("process text normalization removes the leading hash") {
+        NativeIntentRouter.normalizeProcessText("  #初音ミク  ") shouldBe "初音ミク"
     }
 
     test("process text collapses whitespace and removes control characters") {

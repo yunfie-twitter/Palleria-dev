@@ -96,10 +96,6 @@ object CalculatorEngine {
             pos[0]++
             return -parseUnary(tokens, pos)
         }
-        if (pos[0] < tokens.size && tokens[pos[0]] == "+") {
-            pos[0]++
-            return parseUnary(tokens, pos)
-        }
         return parsePrimary(tokens, pos)
     }
 

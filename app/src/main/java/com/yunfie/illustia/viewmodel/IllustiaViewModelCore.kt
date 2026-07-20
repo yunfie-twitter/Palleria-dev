@@ -12,6 +12,7 @@ import com.yunfie.illustia.nativebridge.NativeIntentEvent
 import com.yunfie.illustia.nativebridge.NativeIntentRouter
 import com.yunfie.illustia.nativebridge.NativeImageStore
 import com.yunfie.illustia.widget.RankingWidgetProvider
+import com.yunfie.illustia.widget.IllustWidgetProvider
 import com.yunfie.illustia.models.HomeFeedKind
 import com.yunfie.illustia.models.Illust
 import com.yunfie.illustia.data.IllustiaRepository
@@ -113,6 +114,7 @@ open class IllustiaViewModelCore(
     private var closeUserPageJob: Job? = null
     private var privacyUnlockJob: Job? = null
     private var autoLockJob: Job? = null
+    private var appLockRecoveryLogin = false
     private var recommendedTagsJob: Job? = null
     private var recommendedTagsExpiryJob: Job? = null
     private var savedLibraryJob: Job? = null
@@ -443,6 +445,7 @@ open class IllustiaViewModelCore(
         }
         updateSettings { it.copy(privacyModeEnabled = true) }
         _uiState.update { it.copy(privacyLocked = true) }
+        refreshPrivacySensitiveWidgets()
     }
 
     /**
@@ -451,6 +454,15 @@ open class IllustiaViewModelCore(
     fun disablePrivacyMode() {
         updateSettings { it.copy(privacyModeEnabled = false) }
         _uiState.update { it.copy(privacyLocked = false, calculatorBuffer = "", isTransitioningToIllustia = false) }
+        refreshPrivacySensitiveWidgets()
+    }
+
+    private fun refreshPrivacySensitiveWidgets() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = getApplication<Application>().applicationContext
+            IllustWidgetProvider.refreshAll(context)
+            refreshRankingWidget()
+        }
     }
 
     /**
@@ -616,17 +628,13 @@ open class IllustiaViewModelCore(
     }
 
     fun openRecoveryWebLogin() {
+        appLockRecoveryLogin = true
         _uiState.update {
             it.copy(
                 showLockRecoveryDialog = false,
                 webLoginRequest = createPixivWebLoginRequest(),
             )
         }
-    }
-
-    fun resetAppLockData() {
-        settingsStore.clearPinHash()
-        updateSettings { it.copy(appLockEnabled = false, biometricEnabled = false, appLockFailCount = 0, appLockCooldownUntil = 0L) }
     }
 
     fun cooldownRemainingSeconds(): Long {
@@ -818,6 +826,7 @@ open class IllustiaViewModelCore(
     }
 
     fun openWebLogin() {
+        appLockRecoveryLogin = false
         _uiState.update {
             it.copy(
                 webLoginRequest = createPixivWebLoginRequest(),
@@ -828,6 +837,7 @@ open class IllustiaViewModelCore(
     }
 
     fun closeWebLogin() {
+        appLockRecoveryLogin = false
         _uiState.update { it.copy(webLoginRequest = null) }
     }
 
@@ -836,6 +846,7 @@ open class IllustiaViewModelCore(
     }
 
     fun failWebLogin(message: String) {
+        appLockRecoveryLogin = false
         _uiState.update {
             it.copy(
                 webLoginRequest = null,
@@ -846,7 +857,8 @@ open class IllustiaViewModelCore(
 
     fun completeWebLogin(code: String) {
         val request = _uiState.value.webLoginRequest ?: return
-        val wasRecovery = _uiState.value.appLocked && _uiState.value.settings.appLockFailCount >= 12
+        val wasRecovery = appLockRecoveryLogin && _uiState.value.appLocked
+        appLockRecoveryLogin = false
         runLoading {
             val session = repository.loginWithAuthorizationCode(code, request.codeVerifier)
             applyLoggedInSession(session.accessToken.isNotBlank(), str(R.string.msg_web_login_complete))

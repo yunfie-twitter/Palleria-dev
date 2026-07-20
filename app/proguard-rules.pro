@@ -21,8 +21,11 @@
 # JNA is used by the generated UniFFI Rust bindings. Its native dispatcher
 # resolves Java classes and fields by their original JNI names at runtime.
 -keep class com.sun.jna.** { *; }
-# UniFFI's generated records and converters are referenced directly, so R8 may
-# shrink and optimize them. Only JNA-reflected names and fields are kept below.
+# UniFFI's generated bindings include JNA-reflected library interfaces,
+# structures, callbacks, converters, and error types. Keep the generated
+# boundary intact so R8 cannot rename or remove members required by JNA.
+-keep class com.yunfie.illustia.rust.** { *; }
+-keep interface com.yunfie.illustia.rust.** { *; }
 -keep class * extends com.sun.jna.Structure { *; }
 -keep interface * extends com.sun.jna.Library { *; }
 -keep interface * extends com.sun.jna.Callback { *; }

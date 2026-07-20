@@ -21,24 +21,30 @@ class PalleriaSyncAdapter(context: Context) : AbstractThreadedSyncAdapter(contex
         provider: ContentProviderClient,
         syncResult: SyncResult,
     ) {
-        runBlocking(Dispatchers.IO) {
-            runCatching {
-                val settingsStore = SettingsStore(context)
-                val settings = settingsStore.read()
-                PalleriaAccount.reconcile(context, settings.accounts)
-                val userId = AccountManager.get(context)
-                    .getUserData(account, PalleriaAccount.USER_ID)
-                    ?.toLongOrNull()
-                    ?: error("同期対象のPixivユーザーIDがありません。")
-                val storedAccount = settings.accounts.firstOrNull { it.userId == userId }
-                    ?: error("同期対象のPixivアカウントが見つかりません。")
+        try {
+            runBlocking(Dispatchers.IO) {
+                runCatching {
+                    val settingsStore = SettingsStore(context)
+                    val settings = settingsStore.read()
+                    PalleriaAccount.reconcile(context, settings.accounts)
+                    val userId = AccountManager.get(context)
+                        .getUserData(account, PalleriaAccount.USER_ID)
+                        ?.toLongOrNull()
+                        ?: error("同期対象のPixivユーザーIDがありません。")
+                    val storedAccount = settings.accounts.firstOrNull { it.userId == userId }
+                        ?: error("同期対象のPixivアカウントが見つかりません。")
 
-                val api = PixivApiClient(NetworkMode.fromCode(settings.pixivNetworkMode))
-                val session = api.loginWithRefreshToken(storedAccount.refreshToken)
-                api.notifications(session)
-            }.onFailure {
-                syncResult.stats.numIoExceptions++
+                    val api = PixivApiClient(NetworkMode.fromCode(settings.pixivNetworkMode))
+                    val session = api.loginWithRefreshToken(storedAccount.refreshToken)
+                    api.notifications(session)
+                }.onFailure {
+                    syncResult.stats.numIoExceptions++
+                }
             }
+        } catch (_: InterruptedException) {
+            // AbstractThreadedSyncAdapter cancels work by interrupting this thread.
+            // runBlocking translates that normal cancellation into InterruptedException.
+            Thread.currentThread().interrupt()
         }
     }
 }

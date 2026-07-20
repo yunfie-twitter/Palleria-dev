@@ -2,12 +2,7 @@ package com.yunfie.illustia.data
 
 import com.yunfie.illustia.models.NetworkMode
 import java.net.InetAddress
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.X509ExtendedTrustManager
 import okhttp3.ConnectionPool
 import okhttp3.Dispatcher
 import okhttp3.Dns
@@ -55,14 +50,6 @@ internal object PixivNetworkSettings {
         if (mode == NetworkMode.Ech) {
             dns(StaticDns(ECH_DNS_OVERRIDES))
         }
-        // Both ECH and the legacy compat mode disable certificate verification,
-        // matching the behaviour of pixez's rhttp based client.
-        val trustManager = TrustAllCertsManager()
-        val sslContext = SSLContext.getInstance("TLS").apply {
-            init(null, arrayOf(trustManager), SecureRandom())
-        }
-        sslSocketFactory(sslContext.socketFactory as SSLSocketFactory, trustManager)
-        hostnameVerifier { _, _ -> true }
     }
 }
 
@@ -77,13 +64,3 @@ private class StaticDns(private val overrides: Map<String, List<String>>) : Dns 
 
 internal fun createPixivHttpClient(mode: NetworkMode = NetworkMode.Standard): OkHttpClient =
     PixivNetworkSettings.createPixivHttpClient(mode)
-
-private class TrustAllCertsManager : X509ExtendedTrustManager() {
-    override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
-    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
-    override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-    override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String, socket: java.net.Socket) {}
-    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String, socket: java.net.Socket) {}
-    override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String, engine: javax.net.ssl.SSLEngine) {}
-    override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String, engine: javax.net.ssl.SSLEngine) {}
-}

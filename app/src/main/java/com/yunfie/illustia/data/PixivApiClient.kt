@@ -49,7 +49,6 @@ import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -196,7 +195,7 @@ class PixivApiClient(
 
     suspend fun nextWatchlistMangaPage(session: PixivSession, nextUrl: String): WatchlistMangaModel {
         val body = Request.Builder()
-            .url(nextUrl.toHttpUrl())
+            .url(nextUrl.toTrustedPixivApiUrl())
             .pixivApiHeaders(session)
             .get()
             .build()
@@ -227,7 +226,7 @@ class PixivApiClient(
     }
 
     suspend fun nextUserPreviewPage(session: PixivSession, nextUrl: String): PageResult<UserPreview> {
-        return getUserPreviewPage(session, nextUrl.toHttpUrl())
+        return getUserPreviewPage(session, nextUrl.toTrustedPixivApiUrl())
     }
 
     private suspend fun getUserPreviewPage(session: PixivSession, url: HttpUrl): PageResult<UserPreview> {
@@ -248,43 +247,21 @@ class PixivApiClient(
     }
 
     suspend fun userDetail(session: PixivSession, userId: Long): UserProfile {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v1/user/detail", "user_id" to userId.toString(), "filter" to "for_android"))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            val user = root["user"].asObjectOrNull() ?: JsonObject(emptyMap())
-            val profile = root["profile"].asObjectOrNull()
-            val imageUrls = user["profile_image_urls"].asObjectOrNull()
-            UserProfile(
-                id = user.long("id") ?: userId,
-                name = user.string("name").orEmpty(),
-                account = user.string("account").orEmpty(),
-                profileImageUrl = imageUrls?.string("medium"),
-                backgroundImageUrl = profile?.string("background_image_url"),
-                comment = profile?.string("comment").orEmpty(),
-                isFollowed = user["is_followed"]?.jsonPrimitive?.booleanOrNull ?: false,
-            )
-        }
+            .let { httpClient.newCall(it).awaitUserProfile(userId) }
     }
 
     suspend fun illustDetail(session: PixivSession, illustId: Long): Illust {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v1/illust/detail", "illust_id" to illustId.toString(), "filter" to "for_android"))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            root["illust"].asObjectOrNull()?.toIllustOrNull()
-                ?: throw PixivApiException(200, "作品情報を読み込めませんでした。")
-        }
+            .let { httpClient.newCall(it).awaitIllustDetail() }
     }
 
     suspend fun ugoiraMetadata(session: PixivSession, illustId: Long): UgoiraMetadataResponse {
@@ -322,7 +299,7 @@ class PixivApiClient(
 
     suspend fun nextIllustSeriesPage(session: PixivSession, nextUrl: String): IllustSeriesWithIdModel {
         val body = Request.Builder()
-            .url(nextUrl.toHttpUrl())
+            .url(nextUrl.toTrustedPixivApiUrl())
             .pixivApiHeaders(session)
             .get()
             .build()
@@ -393,7 +370,7 @@ class PixivApiClient(
     }
 
     suspend fun nextIllustPage(session: PixivSession, nextUrl: String): PageResult<Illust> {
-        return getIllustPage(session, nextUrl.toHttpUrl())
+        return getIllustPage(session, nextUrl.toTrustedPixivApiUrl())
     }
 
     suspend fun addBookmark(
@@ -485,7 +462,7 @@ class PixivApiClient(
         getNotificationPage(session, pixivApiUrl("v1/notification/view-more", "notification_id" to notificationId.toString()))
 
     suspend fun nextNotificationPage(session: PixivSession, nextUrl: String): NotificationListResult =
-        getNotificationPage(session, nextUrl.toHttpUrl())
+        getNotificationPage(session, nextUrl.toTrustedPixivApiUrl())
 
     private suspend fun getNotificationPage(session: PixivSession, url: HttpUrl): NotificationListResult {
         val body = Request.Builder().url(url).pixivApiHeaders(session).get().build()
@@ -545,7 +522,7 @@ class PixivApiClient(
         getSpotlightPage(session, pixivApiUrl("v1/spotlight/articles", "filter" to "for_android"))
 
     suspend fun nextSpotlightPage(session: PixivSession, nextUrl: String): SpotlightResult =
-        getSpotlightPage(session, nextUrl.toHttpUrl())
+        getSpotlightPage(session, nextUrl.toTrustedPixivApiUrl())
 
     private suspend fun getSpotlightPage(session: PixivSession, url: HttpUrl): SpotlightResult {
         val body = Request.Builder().url(url).pixivApiHeaders(session).get().build()
@@ -633,7 +610,7 @@ class PixivApiClient(
 
     suspend fun nextCommentPage(session: PixivSession, nextUrl: String): CommentResponse {
         val body = Request.Builder()
-            .url(nextUrl.toHttpUrl())
+            .url(nextUrl.toTrustedPixivApiUrl())
             .pixivApiHeaders(session)
             .get()
             .build()
@@ -682,7 +659,7 @@ class PixivApiClient(
     }
 
     suspend fun nextRelatedUsersPage(session: PixivSession, nextUrl: String): RelatedUsersResult {
-        return getRelatedUsersPage(session, nextUrl.toHttpUrl())
+        return getRelatedUsersPage(session, nextUrl.toTrustedPixivApiUrl())
     }
 
     private suspend fun getRelatedUsersPage(session: PixivSession, url: HttpUrl): RelatedUsersResult {
@@ -839,7 +816,7 @@ class PixivApiClient(
     }
 
     suspend fun nextNovelPage(session: PixivSession, nextUrl: String): PageResult<NovelPreview> {
-        return getNovelPage(session, nextUrl.toHttpUrl())
+        return getNovelPage(session, nextUrl.toTrustedPixivApiUrl())
     }
 
     suspend fun novelText(session: PixivSession, novelId: Long): NovelTextContent {

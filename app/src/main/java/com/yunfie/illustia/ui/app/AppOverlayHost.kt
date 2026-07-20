@@ -287,25 +287,10 @@ internal fun AppOverlayHost(
             backgroundColor = MiuixTheme.colorScheme.surfaceContainerHighest,
             onDismissRequest = {},
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Button(
-                    onClick = viewModel::resetAppLockData,
-                    modifier = Modifier.weight(1f),
-                    insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                    colors = overlayActionButtonColors(),
-                ) {
-                    Text(
-                        stringResource(R.string.app_lock_recovery_reset),
-                        color = MiuixTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = viewModel::openRecoveryWebLogin,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     insideMargin = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     colors = overlayActionButtonColors(),
                 ) {

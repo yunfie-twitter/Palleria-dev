@@ -48,6 +48,17 @@ pub struct IllustSeries {
     pub title: Option<String>,
 }
 
+#[derive(Debug, uniffi::Record)]
+pub struct UserProfile {
+    pub id: i64,
+    pub name: String,
+    pub account: String,
+    pub profile_image_url: Option<String>,
+    pub background_image_url: Option<String>,
+    pub comment: String,
+    pub is_followed: bool,
+}
+
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct UgoiraFrame {
     pub file: String,
@@ -66,6 +77,18 @@ pub(crate) struct IllustPageResponse {
     next_url: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub(crate) struct IllustDetailResponse {
+    illust: Option<IllustDto>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct UserDetailResponse {
+    #[serde(default)]
+    user: UserDto,
+    profile: Option<ProfileDto>,
+}
+
 #[derive(Debug, Default, Deserialize)]
 struct ImageUrls {
     square_medium: Option<String>,
@@ -81,7 +104,18 @@ struct UserDto {
     #[serde(default)]
     name: String,
     #[serde(default)]
+    account: String,
+    #[serde(default)]
     profile_image_urls: ImageUrls,
+    #[serde(default)]
+    is_followed: bool,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct ProfileDto {
+    background_image_url: Option<String>,
+    #[serde(default)]
+    comment: String,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -146,6 +180,31 @@ impl IllustPageResponse {
                 .filter_map(IllustDto::into_illust)
                 .collect(),
             next_url: self.next_url,
+        }
+    }
+}
+
+impl IllustDetailResponse {
+    pub(crate) fn into_illust(self) -> Option<Illust> {
+        self.illust.and_then(IllustDto::into_illust)
+    }
+}
+
+impl UserDetailResponse {
+    pub(crate) fn into_profile(self, fallback_user_id: i64) -> UserProfile {
+        let profile = self.profile.unwrap_or_default();
+        UserProfile {
+            id: if self.user.id > 0 {
+                self.user.id
+            } else {
+                fallback_user_id
+            },
+            name: self.user.name,
+            account: self.user.account,
+            profile_image_url: self.user.profile_image_urls.medium,
+            background_image_url: profile.background_image_url,
+            comment: profile.comment,
+            is_followed: self.user.is_followed,
         }
     }
 }
@@ -279,5 +338,38 @@ mod tests {
             serde_json::from_str::<IllustPageResponse>(r#"{"illusts":[{"title":"missing id"}]}"#)
                 .unwrap();
         assert!(response.into_page().items.is_empty());
+    }
+
+    #[test]
+    fn parses_an_illust_detail() {
+        let response: IllustDetailResponse =
+            serde_json::from_str(r#"{"illust":{"id":42,"title":"detail"}}"#).unwrap();
+        let illust = response.into_illust().unwrap();
+        assert_eq!(illust.id, 42);
+        assert_eq!(illust.title, "detail");
+    }
+
+    #[test]
+    fn parses_a_user_detail_and_uses_the_requested_id_as_fallback() {
+        let response: UserDetailResponse = serde_json::from_str(
+            r#"{
+                "user": {
+                    "name": "artist",
+                    "account": "artist-account",
+                    "profile_image_urls": {"medium": "avatar"},
+                    "is_followed": true
+                },
+                "profile": {
+                    "background_image_url": "background",
+                    "comment": "hello"
+                }
+            }"#,
+        )
+        .unwrap();
+        let profile = response.into_profile(99);
+        assert_eq!(profile.id, 99);
+        assert_eq!(profile.account, "artist-account");
+        assert_eq!(profile.profile_image_url.as_deref(), Some("avatar"));
+        assert!(profile.is_followed);
     }
 }

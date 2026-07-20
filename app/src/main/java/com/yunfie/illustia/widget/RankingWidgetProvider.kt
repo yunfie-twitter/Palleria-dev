@@ -81,7 +81,8 @@ class RankingWidgetProvider : AppWidgetProvider() {
 
 private suspend fun buildPreview(context: Context): RemoteViews {
     val views = RemoteViews(context.packageName, R.layout.ranking_widget)
-    val loggedIn = SettingsStore(context.applicationContext).read().refreshToken.isNotBlank()
+    val settings = SettingsStore(context.applicationContext).read()
+    val loggedIn = settings.refreshToken.isNotBlank() && !settings.privacyModeEnabled
     if (loggedIn) {
         views.setViewVisibility(R.id.widget_status, android.view.View.GONE)
         views.setViewVisibility(R.id.widget_logged_out_container, android.view.View.GONE)
@@ -144,7 +145,7 @@ private class RankingWidgetUpdater(
 
     suspend fun update(appWidgetIds: IntArray) {
         val settings = repository.readSettings()
-        if (settings.refreshToken.isBlank()) {
+        if (settings.refreshToken.isBlank() || settings.privacyModeEnabled) {
             renderLoggedOut(appWidgetIds)
             return
         }
