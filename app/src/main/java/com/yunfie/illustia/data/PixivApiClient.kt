@@ -18,13 +18,9 @@ import com.yunfie.illustia.models.pixiv.AccountEditResult
 import com.yunfie.illustia.models.pixiv.CurrentUserProfile
 import com.yunfie.illustia.models.pixiv.IllustSeriesWithIdModel
 import com.yunfie.illustia.models.pixiv.RelatedUsersResult
-import com.yunfie.illustia.models.pixiv.SpotlightArticle
 import com.yunfie.illustia.models.pixiv.SpotlightResult
 import com.yunfie.illustia.models.pixiv.TrendingTag
-import com.yunfie.illustia.models.pixiv.NotificationContent
 import com.yunfie.illustia.models.pixiv.NotificationListResult
-import com.yunfie.illustia.models.pixiv.NotificationViewMore
-import com.yunfie.illustia.models.pixiv.PixivNotification
 import com.yunfie.illustia.models.pixiv.PixivStamp
 import com.yunfie.illustia.models.pixiv.UserProfileEdit
 import com.yunfie.illustia.models.pixiv.UserWorkspace
@@ -35,16 +31,6 @@ import com.yunfie.illustia.models.pixiv.UgoiraFrame
 import com.yunfie.illustia.models.pixiv.UgoiraPlayback
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.regex.Pattern
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -56,12 +42,6 @@ class PixivApiClient(
     private val mode: NetworkMode = NetworkMode.Standard,
 ) {
     private val httpClient = RustPixivHttpClient(mode)
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        coerceInputValues = true
-    }
 
     suspend fun loginWithRefreshToken(refreshToken: String): PixivSession {
         val token = refreshToken.trim()
@@ -160,7 +140,7 @@ class PixivApiClient(
     }
 
     suspend fun searchAutocomplete(session: PixivSession, word: String): List<String> {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(
                 pixivApiUrl(
                     "v2/search/autocomplete",
@@ -171,39 +151,25 @@ class PixivApiClient(
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            root["tags"].asArrayOrEmpty()
-                .mapNotNull { it.asObjectOrNull()?.string("name") }
-        }
+            .let { httpClient.newCall(it).awaitAutocomplete() }
     }
 
     suspend fun watchlistManga(session: PixivSession): WatchlistMangaModel {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v1/watchlist/manga"))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toWatchlistMangaModelOrNull()
-        }
+            .let { httpClient.newCall(it).awaitWatchlistManga() }
     }
 
     suspend fun nextWatchlistMangaPage(session: PixivSession, nextUrl: String): WatchlistMangaModel {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(nextUrl.toTrustedPixivApiUrl())
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toWatchlistMangaModelOrNull()
-        }
+            .let { httpClient.newCall(it).awaitWatchlistManga() }
     }
 
     suspend fun searchUsers(session: PixivSession, word: String): PageResult<UserPreview> {
@@ -230,20 +196,12 @@ class PixivApiClient(
     }
 
     private suspend fun getUserPreviewPage(session: PixivSession, url: HttpUrl): PageResult<UserPreview> {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(url)
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            PageResult(
-                items = root["user_previews"].asArrayOrEmpty().mapNotNull { it.asObjectOrNull()?.toUserPreviewOrNull() },
-                nextUrl = root.string("next_url"),
-            )
-        }
+            .let { httpClient.newCall(it).awaitUserPreviewPage() }
     }
 
     suspend fun userDetail(session: PixivSession, userId: Long): UserProfile {
@@ -265,16 +223,12 @@ class PixivApiClient(
     }
 
     suspend fun ugoiraMetadata(session: PixivSession, illustId: Long): UgoiraMetadataResponse {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v1/ugoira/metadata", "illust_id" to illustId.toString()))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toUgoiraMetadataResponseOrNull()
-        }
+            .let { httpClient.newCall(it).awaitUgoiraMetadata() }
     }
 
     suspend fun relatedIllusts(session: PixivSession, illustId: Long): PageResult<Illust> {
@@ -285,29 +239,21 @@ class PixivApiClient(
     }
 
     suspend fun illustSeries(session: PixivSession, illustSeriesId: Long): IllustSeriesWithIdModel {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v1/illust/series", "filter" to "for_ios", "illust_series_id" to illustSeriesId.toString()))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toIllustSeriesWithIdModelOrNull()
-        }
+            .let { httpClient.newCall(it).awaitIllustSeries() }
     }
 
     suspend fun nextIllustSeriesPage(session: PixivSession, nextUrl: String): IllustSeriesWithIdModel {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(nextUrl.toTrustedPixivApiUrl())
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toIllustSeriesWithIdModelOrNull()
-        }
+            .let { httpClient.newCall(it).awaitIllustSeries() }
     }
 
     suspend fun followUser(session: PixivSession, userId: Long, restrict: Restrict) {
@@ -408,17 +354,10 @@ class PixivApiClient(
     }
 
     suspend fun userFollowDetail(session: PixivSession, userId: Long): UserFollowDetail {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v1/user/follow/detail", "user_id" to userId.toString()))
             .pixivApiHeaders(session).get().build()
-            .let { httpClient.newCall(it).awaitBody() }
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            UserFollowDetail(
-                isFollowed = root.boolean("is_followed") ?: root.boolean("is_follow") ?: false,
-                restrict = root.string("restrict"),
-            )
-        }
+            .let { httpClient.newCall(it).awaitUserFollowDetail() }
     }
 
     fun createWebSocket(
@@ -465,57 +404,22 @@ class PixivApiClient(
         getNotificationPage(session, nextUrl.toTrustedPixivApiUrl())
 
     private suspend fun getNotificationPage(session: PixivSession, url: HttpUrl): NotificationListResult {
-        val body = Request.Builder().url(url).pixivApiHeaders(session).get().build()
-            .let { httpClient.newCall(it).awaitBody() }
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            NotificationListResult(
-                notifications = root["notifications"].asArrayOrEmpty().mapNotNull { element ->
-                    val item = element.asObjectOrNull() ?: return@mapNotNull null
-                    val content = item["content"].asObjectOrNull()
-                    val viewMore = item["view_more"].asObjectOrNull()
-                    PixivNotification(
-                        id = item.long("id") ?: return@mapNotNull null,
-                        createdDatetime = item.string("created_datetime"), type = item.int("type") ?: 0,
-                        content = content?.let { NotificationContent(it.string("text"), it.string("left_icon"), it.string("left_image"), it.string("right_icon"), it.string("right_image")) },
-                        viewMore = viewMore?.let { NotificationViewMore(it.boolean("unread_exists") ?: false, it.string("title")) },
-                        targetUrl = item.string("target_url"), isRead = item.boolean("is_read") ?: true,
-                    )
-                },
-                nextUrl = root.string("next_url"),
-            )
-        }
+        return Request.Builder().url(url).pixivApiHeaders(session).get().build()
+            .let { httpClient.newCall(it).awaitNotificationPage() }
     }
 
     suspend fun stamps(session: PixivSession): List<PixivStamp> {
-        val body = Request.Builder().url(pixivApiUrl("v1/stamps")).pixivApiHeaders(session).get().build()
-            .let { httpClient.newCall(it).awaitBody() }
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject["stamps"].asArrayOrEmpty().mapNotNull { element ->
-                val stamp = element.asObjectOrNull() ?: return@mapNotNull null
-                PixivStamp(stamp.long("stamp_id") ?: return@mapNotNull null, stamp.string("stamp_url") ?: return@mapNotNull null)
-            }
-        }
+        return Request.Builder().url(pixivApiUrl("v1/stamps")).pixivApiHeaders(session).get().build()
+            .let { httpClient.newCall(it).awaitStamps() }
     }
 
     suspend fun trendingTagDetails(session: PixivSession): List<TrendingTag> {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v1/trending-tags/illust", "filter" to "for_android"))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            root["trend_tags"].asArrayOrEmpty().mapNotNull { element ->
-                val item = element.asObjectOrNull() ?: return@mapNotNull null
-                val tag = item.string("tag") ?: return@mapNotNull null
-                val illust = item["illust"].asObjectOrNull()
-                val images = illust?.get("image_urls").asObjectOrNull()
-                TrendingTag(tag, item.string("translated_name"), illust?.long("id"), images?.string("medium"))
-            }
-        }
+            .let { httpClient.newCall(it).awaitTrendingTags() }
     }
 
     suspend fun spotlightArticles(session: PixivSession): SpotlightResult =
@@ -525,27 +429,12 @@ class PixivApiClient(
         getSpotlightPage(session, nextUrl.toTrustedPixivApiUrl())
 
     private suspend fun getSpotlightPage(session: PixivSession, url: HttpUrl): SpotlightResult {
-        val body = Request.Builder().url(url).pixivApiHeaders(session).get().build()
-            .let { httpClient.newCall(it).awaitBody() }
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            SpotlightResult(
-                articles = root["spotlight_articles"].asArrayOrEmpty().mapNotNull { element ->
-                    val item = element.asObjectOrNull() ?: return@mapNotNull null
-                    SpotlightArticle(
-                        item.long("id") ?: return@mapNotNull null,
-                        item.string("title").orEmpty(), item.string("pure_title").orEmpty(),
-                        item.string("thumbnail").orEmpty(), item.string("article_url").orEmpty(),
-                        item.string("publish_date").orEmpty(),
-                    )
-                },
-                nextUrl = root.string("next_url"),
-            )
-        }
+        return Request.Builder().url(url).pixivApiHeaders(session).get().build()
+            .let { httpClient.newCall(it).awaitSpotlight() }
     }
 
     suspend fun illustComments(session: PixivSession, illustId: Long, offset: Int? = null): CommentResponse {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(
                 pixivApiUrl(
                     "v3/illust/comments",
@@ -556,15 +445,11 @@ class PixivApiClient(
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toCommentResponseOrNull()
-        }
+            .let { httpClient.newCall(it).awaitCommentPage() }
     }
 
     suspend fun illustCommentReplies(session: PixivSession, commentId: Long, offset: Int? = null): CommentResponse {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(
                 pixivApiUrl(
                     "v2/illust/comment/replies",
@@ -575,50 +460,34 @@ class PixivApiClient(
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toCommentResponseOrNull()
-        }
+            .let { httpClient.newCall(it).awaitCommentPage() }
     }
 
     suspend fun novelComments(session: PixivSession, novelId: Long): CommentResponse {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v3/novel/comments", "novel_id" to novelId.toString()))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toCommentResponseOrNull()
-        }
+            .let { httpClient.newCall(it).awaitCommentPage() }
     }
 
     suspend fun novelCommentReplies(session: PixivSession, commentId: Long): CommentResponse {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v2/novel/comment/replies", "comment_id" to commentId.toString()))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toCommentResponseOrNull()
-        }
+            .let { httpClient.newCall(it).awaitCommentPage() }
     }
 
     suspend fun nextCommentPage(session: PixivSession, nextUrl: String): CommentResponse {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(nextUrl.toTrustedPixivApiUrl())
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.toCommentResponseOrNull()
-        }
+            .let { httpClient.newCall(it).awaitCommentPage() }
     }
 
     suspend fun addIllustComment(session: PixivSession, illustId: Long, comment: String, parentCommentId: Long? = null) {
@@ -630,25 +499,12 @@ class PixivApiClient(
     }
 
     suspend fun currentUserProfile(session: PixivSession): CurrentUserProfile {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v1/user/me/state"))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-        return withContext(Dispatchers.Default) {
-            val profile = json.parseToJsonElement(body).jsonObject["profile"].asObjectOrNull()
-                ?: error("Pixiv profile response is missing profile.")
-            val images = profile["profile_image_urls"].asObjectOrNull()
-            CurrentUserProfile(
-                userId = profile.long("user_id") ?: error("Pixiv user ID is missing."),
-                pixivId = profile.string("pixiv_id").orEmpty(),
-                name = profile.string("name").orEmpty(),
-                profileImageUrl = images?.string("medium"),
-                isPremium = profile.boolean("is_premium") ?: false,
-                xRestrict = profile.int("x_restrict") ?: 0,
-            )
-        }
+            .let { httpClient.newCall(it).awaitCurrentUserProfile() }
     }
 
     suspend fun relatedUsers(session: PixivSession, userId: Long): RelatedUsersResult {
@@ -663,16 +519,9 @@ class PixivApiClient(
     }
 
     private suspend fun getRelatedUsersPage(session: PixivSession, url: HttpUrl): RelatedUsersResult {
-        val body = Request.Builder().url(url).pixivApiHeaders(session).get().build()
-            .let { httpClient.newCall(it).awaitBody() }
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            RelatedUsersResult(
-                users = root["user_previews"].asArrayOrEmpty()
-                    .mapNotNull { it.asObjectOrNull()?.toUserPreviewOrNull() },
-                nextUrl = root.string("next_url"),
-            )
-        }
+        return Request.Builder().url(url).pixivApiHeaders(session).get().build()
+            .let { httpClient.newCall(it).awaitUserPreviewPage() }
+            .let { page -> RelatedUsersResult(users = page.items, nextUrl = page.nextUrl) }
     }
 
     suspend fun setUserWorkspace(session: PixivSession, workspace: UserWorkspace) {
@@ -704,24 +553,12 @@ class PixivApiClient(
                 }
             }
             .build()
-        val responseBody = Request.Builder()
+        return Request.Builder()
             .url("https://app-api.pixiv.net/v1/user/profile/edit")
             .pixivApiHeaders(session)
             .post(body)
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(responseBody).jsonObject
-            val result = root["body"].asObjectOrNull()
-            val validation = result?.get("validation_errors").asObjectOrNull()
-            AccountEditResult(
-                isSucceeded = result?.boolean("is_succeed") ?: !(root.boolean("error") ?: false),
-                message = root.string("message").orEmpty(),
-                validationErrors = validation?.mapValues { (_, value) ->
-                    value.jsonPrimitive.contentOrNull.orEmpty()
-                }.orEmpty(),
-            )
-        }
+            .let { httpClient.newCall(it).awaitAccountEdit() }
     }
 
     suspend fun addIllustStampComment(
@@ -746,27 +583,22 @@ class PixivApiClient(
     }
 
     suspend fun isAiContentVisible(session: PixivSession): Boolean {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(pixivApiUrl("v1/user/ai-show-settings"))
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-        return withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.boolean("show_ai") ?: false
-        }
+            .let { httpClient.newCall(it).awaitOptionalBoolean() }
+            ?: false
     }
 
     suspend fun setAiContentVisible(session: PixivSession, visible: Boolean) {
-        val body = Request.Builder()
+        val saved = Request.Builder()
             .url("https://app-api.pixiv.net/v1/user/ai-show-settings/edit")
             .pixivApiHeaders(session)
             .post(FormBody.Builder().add("show_ai", visible.toString()).build())
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-        val saved = withContext(Dispatchers.Default) {
-            json.parseToJsonElement(body).jsonObject.boolean("show_ai")
-        }
+            .let { httpClient.newCall(it).awaitOptionalBoolean() }
         check(saved == visible) { "AI作品の表示設定を更新できませんでした。" }
     }
 
@@ -820,7 +652,7 @@ class PixivApiClient(
     }
 
     suspend fun novelText(session: PixivSession, novelId: Long): NovelTextContent {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(
                 pixivApiUrl(
                     "webview/v2/novel",
@@ -831,22 +663,7 @@ class PixivApiClient(
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            val root = parseNovelWebviewBody(body)
-            val prev = root["seriesNavigation"].asObjectOrNull()?.get("prevNovel")?.asObjectOrNull()
-            val next = root["seriesNavigation"].asObjectOrNull()?.get("nextNovel")?.asObjectOrNull()
-            NovelTextContent(
-                novelId = novelId,
-                title = root.string("title").orEmpty(),
-                text = root.string("text")?.ifBlank { root.string("novel_text").orEmpty() } ?: root.string("novel_text").orEmpty(),
-                seriesPrevId = prev?.long("id"),
-                seriesPrevTitle = prev?.string("title"),
-                seriesNextId = next?.long("id"),
-                seriesNextTitle = next?.string("title"),
-            )
-        }
+            .let { httpClient.newCall(it).awaitNovelText(novelId) }
     }
 
     private suspend fun getIllustPage(session: PixivSession, url: HttpUrl): PageResult<Illust> {
@@ -859,36 +676,12 @@ class PixivApiClient(
     }
 
     private suspend fun getNovelPage(session: PixivSession, url: HttpUrl): PageResult<NovelPreview> {
-        val body = Request.Builder()
+        return Request.Builder()
             .url(url)
             .pixivApiHeaders(session)
             .get()
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
-
-        return withContext(Dispatchers.Default) {
-            val root = json.parseToJsonElement(body).jsonObject
-            val novels = root["novels"].asArrayOrEmpty().mapNotNull { element ->
-                val item = element.asObjectOrNull() ?: return@mapNotNull null
-                val user = item["user"].asObjectOrNull()
-                val images = item["image_urls"].asObjectOrNull()
-                NovelPreview(
-                    id = item.long("id") ?: return@mapNotNull null,
-                    title = item.string("title").orEmpty(),
-                    caption = item.string("caption").orEmpty(),
-                    userId = user?.long("id") ?: 0L,
-                    userName = user?.string("name").orEmpty(),
-                    userAccount = user?.string("account").orEmpty(),
-                    coverUrl = images?.string("medium").orEmpty(),
-                    pageCount = item.int("page_count") ?: 0,
-                    textLength = item.int("text_length") ?: 0,
-                    isBookmarked = item.boolean("is_bookmarked") ?: false,
-                    totalBookmarks = item.int("total_bookmarks") ?: 0,
-                    totalView = item.int("total_view") ?: 0,
-                )
-            }
-            PageResult(items = novels, nextUrl = root.string("next_url"))
-        }
+            .let { httpClient.newCall(it).awaitNovelPage() }
     }
 
     private suspend fun postAuthedForm(session: PixivSession, url: String, body: FormBody) {
@@ -897,7 +690,7 @@ class PixivApiClient(
             .pixivApiHeaders(session)
             .post(body)
             .build()
-            .let { httpClient.newCall(it).awaitBody() }
+            .let { httpClient.newCall(it).awaitComplete() }
     }
 
     private fun pixivApiUrl(path: String, vararg queryParameters: Pair<String, String?>): HttpUrl {
@@ -916,26 +709,4 @@ class PixivApiClient(
     private fun pixivDate(date: LocalDate): String =
         date.format(DateTimeFormatter.ofPattern("yyyy-M-d"))
 
-    private fun JsonObject.int(name: String): Int? = this[name]?.jsonPrimitive?.intOrNull
-
-    private fun JsonObject.boolean(name: String): Boolean? = this[name]?.jsonPrimitive?.booleanOrNull
-
-    private fun parseNovelWebviewBody(body: String): JsonObject {
-        val trimmed = body.trim()
-        if (trimmed.startsWith("{")) {
-            return json.parseToJsonElement(trimmed).jsonObject
-        }
-
-        val match = NOVEL_WEBVIEW_PATTERN.matcher(body)
-        if (!match.find() || match.groupCount() < 1) {
-            val preview = body.lineSequence().take(8).joinToString(" ").take(320)
-            throw PixivApiException(200, "小説レスポンスを解析できませんでした: $preview")
-        }
-        return json.parseToJsonElement(match.group(1)!!).jsonObject
-    }
-
-    private companion object {
-        val NOVEL_WEBVIEW_PATTERN: Pattern =
-            Pattern.compile("novel:\\s*(\\{.+?\\}),\\s*isOwnWork", Pattern.DOTALL)
-    }
 }

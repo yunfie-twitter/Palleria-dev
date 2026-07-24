@@ -10,10 +10,18 @@ use std::time::Duration;
 use reqwest::blocking::Client;
 
 use crate::config::{ECH_HOSTS, ECH_IPS};
-use crate::error::{ApiError, invalid_request, network_error};
+use crate::error::{ApiError, invalid_request, invalid_response, network_error};
 use crate::headers::PixivHeaders;
 use crate::models::{
-    ApiResponse, Illust, IllustPage, LoginSession, UgoiraFrame, UgoiraPlayback, UserProfile,
+    AccountEditResponse, AccountEditResult, AutocompleteResponse, CommentPage, CommentPageResponse,
+    CurrentUserProfile, Illust, IllustDetailResponse, IllustPage, IllustPageResponse,
+    IllustSeriesPage, IllustSeriesPageResponse, LoginSession, NotificationPage,
+    NotificationPageResponse, NovelPage, NovelPageResponse, NovelText, OptionalBoolean,
+    PixivRequest, SimpleBooleanResponse, SpotlightPage, SpotlightResponse, StampList,
+    StampResponse, StringList, TrendingTagList, TrendingTagResponse, UgoiraFrame, UgoiraMetadata,
+    UgoiraMetadataResponse, UgoiraPlayback, UserDetailResponse, UserFollowDetail,
+    UserFollowDetailResponse, UserMeResponse, UserPreviewPage, UserPreviewPageResponse,
+    UserProfile, WatchlistMangaPage, WatchlistMangaResponse,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -97,52 +105,148 @@ impl PixivHttpClient {
         oauth::create_web_login_url(create_provisional_account, code_challenge)
     }
 
-    pub fn execute(
-        &self,
-        method: String,
-        url: String,
-        headers: HashMap<String, String>,
-        body: Vec<u8>,
-        content_type: Option<String>,
-    ) -> Result<ApiResponse, ApiError> {
-        transport::execute(self, method, url, headers, body, content_type)
+    pub fn execute_illust_page(&self, request: PixivRequest) -> Result<IllustPage, ApiError> {
+        transport::execute_json::<IllustPageResponse>(self, request, "illust page")
+            .map(IllustPageResponse::into_page)
     }
 
-    pub fn execute_illust_page(
-        &self,
-        method: String,
-        url: String,
-        headers: HashMap<String, String>,
-        body: Vec<u8>,
-        content_type: Option<String>,
-    ) -> Result<IllustPage, ApiError> {
-        let response = self.execute(method, url, headers, body, content_type)?;
-        endpoints::illust_page(&response.body)
-    }
-
-    pub fn execute_illust_detail(
-        &self,
-        method: String,
-        url: String,
-        headers: HashMap<String, String>,
-        body: Vec<u8>,
-        content_type: Option<String>,
-    ) -> Result<Illust, ApiError> {
-        let response = self.execute(method, url, headers, body, content_type)?;
-        endpoints::illust_detail(&response.body)
+    pub fn execute_illust_detail(&self, request: PixivRequest) -> Result<Illust, ApiError> {
+        transport::execute_json::<IllustDetailResponse>(self, request, "illust detail")?
+            .into_illust()
+            .ok_or_else(|| {
+                invalid_response("illust detail response does not contain a valid illust")
+            })
     }
 
     pub fn execute_user_profile(
         &self,
-        method: String,
-        url: String,
-        headers: HashMap<String, String>,
-        body: Vec<u8>,
-        content_type: Option<String>,
+        request: PixivRequest,
         fallback_user_id: i64,
     ) -> Result<UserProfile, ApiError> {
-        let response = self.execute(method, url, headers, body, content_type)?;
-        endpoints::user_profile(&response.body, fallback_user_id)
+        transport::execute_json::<UserDetailResponse>(self, request, "user detail")
+            .map(|response| response.into_profile(fallback_user_id))
+    }
+
+    pub fn execute_autocomplete(&self, request: PixivRequest) -> Result<StringList, ApiError> {
+        transport::execute_json::<AutocompleteResponse>(self, request, "autocomplete")
+            .map(AutocompleteResponse::into_list)
+    }
+
+    pub fn execute_user_preview_page(
+        &self,
+        request: PixivRequest,
+    ) -> Result<UserPreviewPage, ApiError> {
+        transport::execute_json::<UserPreviewPageResponse>(self, request, "user preview page")
+            .map(UserPreviewPageResponse::into_page)
+    }
+
+    pub fn execute_ugoira_metadata(
+        &self,
+        request: PixivRequest,
+    ) -> Result<UgoiraMetadata, ApiError> {
+        transport::execute_json::<UgoiraMetadataResponse>(self, request, "ugoira metadata")
+            .map(UgoiraMetadataResponse::into_metadata)
+    }
+
+    pub fn execute_comment_page(&self, request: PixivRequest) -> Result<CommentPage, ApiError> {
+        transport::execute_json::<CommentPageResponse>(self, request, "comment page")
+            .map(CommentPageResponse::into_page)
+    }
+
+    pub fn execute_notification_page(
+        &self,
+        request: PixivRequest,
+    ) -> Result<NotificationPage, ApiError> {
+        transport::execute_json::<NotificationPageResponse>(self, request, "notification page")
+            .map(NotificationPageResponse::into_page)
+    }
+
+    pub fn execute_novel_page(&self, request: PixivRequest) -> Result<NovelPage, ApiError> {
+        transport::execute_json::<NovelPageResponse>(self, request, "novel page")
+            .map(NovelPageResponse::into_page)
+    }
+
+    pub fn execute_watchlist_manga(
+        &self,
+        request: PixivRequest,
+    ) -> Result<WatchlistMangaPage, ApiError> {
+        transport::execute_json::<WatchlistMangaResponse>(self, request, "watchlist manga")
+            .map(WatchlistMangaResponse::into_page)
+    }
+
+    pub fn execute_illust_series_page(
+        &self,
+        request: PixivRequest,
+    ) -> Result<IllustSeriesPage, ApiError> {
+        transport::execute_json::<IllustSeriesPageResponse>(self, request, "illust series")
+            .map(IllustSeriesPageResponse::into_page)
+    }
+
+    pub fn execute_optional_boolean(
+        &self,
+        request: PixivRequest,
+    ) -> Result<OptionalBoolean, ApiError> {
+        transport::execute_json::<SimpleBooleanResponse>(self, request, "boolean response")
+            .map(SimpleBooleanResponse::into_value)
+    }
+
+    pub fn execute_user_follow_detail(
+        &self,
+        request: PixivRequest,
+    ) -> Result<UserFollowDetail, ApiError> {
+        transport::execute_json::<UserFollowDetailResponse>(self, request, "user follow detail")
+            .map(UserFollowDetailResponse::into_detail)
+    }
+
+    pub fn execute_stamps(&self, request: PixivRequest) -> Result<StampList, ApiError> {
+        transport::execute_json::<StampResponse>(self, request, "stamps")
+            .map(StampResponse::into_list)
+    }
+
+    pub fn execute_trending_tags(
+        &self,
+        request: PixivRequest,
+    ) -> Result<TrendingTagList, ApiError> {
+        transport::execute_json::<TrendingTagResponse>(self, request, "trending tags")
+            .map(TrendingTagResponse::into_list)
+    }
+
+    pub fn execute_spotlight(&self, request: PixivRequest) -> Result<SpotlightPage, ApiError> {
+        transport::execute_json::<SpotlightResponse>(self, request, "spotlight")
+            .map(SpotlightResponse::into_page)
+    }
+
+    pub fn execute_current_user_profile(
+        &self,
+        request: PixivRequest,
+    ) -> Result<CurrentUserProfile, ApiError> {
+        transport::execute_json::<UserMeResponse>(self, request, "current user profile")?
+            .into_profile()
+            .ok_or_else(|| {
+                invalid_response("current user profile response is missing a valid profile")
+            })
+    }
+
+    pub fn execute_account_edit(
+        &self,
+        request: PixivRequest,
+    ) -> Result<AccountEditResult, ApiError> {
+        transport::execute_json::<AccountEditResponse>(self, request, "account edit")
+            .map(AccountEditResponse::into_result)
+    }
+
+    pub fn execute_novel_text(
+        &self,
+        request: PixivRequest,
+        novel_id: i64,
+    ) -> Result<NovelText, ApiError> {
+        let body =
+            transport::execute_text(self, request, "novel text", transport::HTML_RESPONSE_LIMIT)?;
+        endpoints::novel_text(&body, novel_id)
+    }
+
+    pub fn execute_no_content(&self, request: PixivRequest) -> Result<(), ApiError> {
+        transport::execute_no_content(self, request)
     }
 
     pub fn prepare_ugoira(
@@ -186,9 +290,10 @@ mod tests {
         ));
     }
 
-    fn server(status: u16, body: &'static str) -> String {
+    fn server(status: u16, body: impl Into<String>) -> String {
         let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
         let address = format!("http://{}", server.server_addr());
+        let body = body.into();
         thread::spawn(move || {
             server
                 .recv()
@@ -199,31 +304,20 @@ mod tests {
         address
     }
 
-    #[test]
-    fn returns_success_body() {
-        let response = client()
-            .execute(
-                "GET".into(),
-                server(200, "{\"ok\":true}"),
-                HashMap::new(),
-                vec![],
-                None,
-            )
-            .unwrap();
-        assert_eq!(response.status, 200);
-        assert_eq!(response.body, r#"{"ok":true}"#);
+    fn request(url: String) -> PixivRequest {
+        PixivRequest {
+            method: "GET".into(),
+            url,
+            headers: HashMap::new(),
+            body: Vec::new(),
+            content_type: None,
+        }
     }
 
     #[test]
     fn exposes_http_status_and_body() {
         let error = client()
-            .execute(
-                "GET".into(),
-                server(403, "denied"),
-                HashMap::new(),
-                vec![],
-                None,
-            )
+            .execute_no_content(request(server(403, "denied")))
             .unwrap_err();
         assert!(matches!(error, ApiError::Http { status: 403, detail } if detail == "denied"));
     }
@@ -231,13 +325,10 @@ mod tests {
     #[test]
     fn parses_illust_page_before_crossing_the_ffi_boundary() {
         let response = client()
-            .execute_illust_page(
-                "GET".into(),
-                server(200, r#"{"illusts":[{"id":1}],"next_url":null}"#),
-                HashMap::new(),
-                vec![],
-                None,
-            )
+            .execute_illust_page(request(server(
+                200,
+                r#"{"illusts":[{"id":1}],"next_url":null}"#,
+            )))
             .unwrap();
         assert_eq!(response.items.len(), 1);
         assert_eq!(response.items[0].id, 1);
@@ -246,13 +337,7 @@ mod tests {
     #[test]
     fn parses_illust_detail_before_crossing_the_ffi_boundary() {
         let response = client()
-            .execute_illust_detail(
-                "GET".into(),
-                server(200, r#"{"illust":{"id":7}}"#),
-                HashMap::new(),
-                vec![],
-                None,
-            )
+            .execute_illust_detail(request(server(200, r#"{"illust":{"id":7}}"#)))
             .unwrap();
         assert_eq!(response.id, 7);
     }
@@ -261,15 +346,19 @@ mod tests {
     fn parses_user_profile_before_crossing_the_ffi_boundary() {
         let response = client()
             .execute_user_profile(
-                "GET".into(),
-                server(200, r#"{"user":{"name":"artist"},"profile":{}}"#),
-                HashMap::new(),
-                vec![],
-                None,
+                request(server(200, r#"{"user":{"name":"artist"},"profile":{}}"#)),
                 8,
             )
             .unwrap();
         assert_eq!(response.id, 8);
         assert_eq!(response.name, "artist");
+    }
+
+    #[test]
+    fn reports_invalid_json_as_an_invalid_response() {
+        let error = client()
+            .execute_illust_page(request(server(200, "{broken")))
+            .unwrap_err();
+        assert!(matches!(error, ApiError::InvalidResponse { .. }));
     }
 }

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 use super::{PixivHttpClient, transport};
 use crate::error::{ApiError, invalid_request, io_error, network_error};
 use crate::models::{UgoiraFrame, UgoiraPlayback};
+use crate::temp_path::TempPath;
 use crate::ugoira;
 
 const MAX_ARCHIVE_BYTES: u64 = 512 * 1024 * 1024;
@@ -30,17 +31,13 @@ pub(super) fn prepare(
     }
 
     let headers = transport::request_headers(client, headers, None)?;
-    let mut response = client
+    let response = client
         .client
         .get(&url)
         .headers(headers)
         .send()
         .map_err(network_error)?;
-    let status = response.status().as_u16();
-    if !(200..300).contains(&status) {
-        let body = response.text().map_err(network_error)?;
-        return Err(crate::error::http_error(status, &body));
-    }
+    let mut response = transport::ensure_success(response)?;
     if response
         .content_length()
         .is_some_and(|length| length > MAX_ARCHIVE_BYTES)
@@ -52,25 +49,25 @@ pub(super) fn prepare(
         .parent()
         .ok_or_else(|| invalid_request("ugoira cache directory has no parent"))?;
     fs::create_dir_all(parent).map_err(|error| io_error("create ugoira cache parent", error))?;
-    let zip_path = cache_dir.with_extension("zip.download");
-    let result = download_and_extract(&mut response, &zip_path, &cache_dir, frames);
-    let _ = fs::remove_file(zip_path);
-    result
+    let zip_path = TempPath::sibling(&cache_dir, "zip.download");
+    download_and_extract(&mut response, &zip_path, &cache_dir, frames)
 }
 
 fn download_and_extract(
     response: &mut impl Read,
-    zip_path: &Path,
+    zip_path: &TempPath,
     cache_dir: &Path,
     frames: Vec<UgoiraFrame>,
 ) -> Result<UgoiraPlayback, ApiError> {
-    let mut output =
-        File::create(zip_path).map_err(|error| io_error("create ugoira download", error))?;
+    let mut output = zip_path
+        .create_file()
+        .map_err(|error| io_error("create ugoira download", error))?;
     copy_with_limit(response, &mut output, MAX_ARCHIVE_BYTES)?;
     output
         .flush()
         .map_err(|error| io_error("flush ugoira download", error))?;
-    ugoira::prepare(zip_path, cache_dir, frames)
+    drop(output);
+    ugoira::prepare(zip_path.path(), cache_dir, frames)
 }
 
 fn cache_lock(cache_dir: &Path) -> Result<Arc<Mutex<()>>, ApiError> {

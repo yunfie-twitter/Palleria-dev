@@ -1,12 +1,13 @@
 use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{self, Read};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path};
 
 use zip::ZipArchive;
 
 use crate::error::{ApiError, invalid_request, io_error};
 use crate::models::{UgoiraFrame, UgoiraPlayback};
+use crate::temp_path::TempPath;
 
 const MAX_ENTRIES: usize = 10_000;
 const MAX_ENTRY_BYTES: u64 = 32 * 1024 * 1024;
@@ -32,21 +33,17 @@ pub(crate) fn prepare(
         .parent()
         .ok_or_else(|| invalid("ugoira cache directory has no parent"))?;
     fs::create_dir_all(parent).map_err(|error| io_error("create ugoira cache parent", error))?;
-    let staging = staging_path(cache_dir);
-    remove_if_exists(&staging)?;
-    fs::create_dir_all(&staging)
+    let staging = TempPath::sibling(cache_dir, "staging");
+    fs::create_dir_all(staging.path())
         .map_err(|error| io_error("create ugoira staging directory", error))?;
 
-    let result = extract_required(zip_path, &staging, &frames).and_then(|()| {
-        File::create(staging.join(COMPLETE_MARKER))
+    extract_required(zip_path, staging.path(), &frames).and_then(|()| {
+        File::create(staging.path().join(COMPLETE_MARKER))
             .map_err(|error| io_error("create ugoira completion marker", error))?;
         remove_if_exists(cache_dir)?;
-        fs::rename(&staging, cache_dir).map_err(|error| io_error("publish ugoira cache", error))
-    });
-    if result.is_err() {
-        let _ = fs::remove_dir_all(&staging);
-    }
-    result?;
+        fs::rename(staging.path(), cache_dir)
+            .map_err(|error| io_error("publish ugoira cache", error))
+    })?;
     Ok(playback(cache_dir, frames))
 }
 
@@ -120,8 +117,12 @@ fn validate_frame_names(frames: &[UgoiraFrame]) -> Result<(), ApiError> {
     if frames.len() > MAX_ENTRIES {
         return Err(invalid("ugoira metadata contains too many frames"));
     }
+    let mut names = HashSet::with_capacity(frames.len());
     for frame in frames {
         validate_relative_path(&frame.file)?;
+        if !names.insert(frame.file.as_str()) {
+            return Err(invalid("ugoira metadata contains duplicate frame names"));
+        }
     }
     Ok(())
 }
@@ -162,14 +163,6 @@ fn playback(cache_dir: &Path, frames: Vec<UgoiraFrame>) -> UgoiraPlayback {
     }
 }
 
-fn staging_path(cache_dir: &Path) -> PathBuf {
-    let file_name = cache_dir
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("ugoira");
-    cache_dir.with_file_name(format!("{file_name}.staging"))
-}
-
 fn remove_if_exists(path: &Path) -> Result<(), ApiError> {
     if path.is_dir() {
         fs::remove_dir_all(path).map_err(|error| io_error("remove ugoira directory", error))?;
@@ -193,6 +186,7 @@ fn zip_error(error: zip::result::ZipError) -> ApiError {
 mod tests {
     use super::*;
     use std::io::Write;
+    use std::path::PathBuf;
     use zip::write::SimpleFileOptions;
 
     fn temp_dir(name: &str) -> PathBuf {
@@ -270,6 +264,50 @@ mod tests {
             }],
         );
         assert!(matches!(result, Err(ApiError::InvalidRequest { .. })));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn rejects_duplicate_frame_names() {
+        let frames = vec![
+            UgoiraFrame {
+                file: "000.jpg".into(),
+                delay_millis: 20,
+            },
+            UgoiraFrame {
+                file: "000.jpg".into(),
+                delay_millis: 30,
+            },
+        ];
+        let error = validate_frame_names(&frames).unwrap_err();
+        assert!(matches!(
+            error,
+            ApiError::InvalidRequest { detail }
+                if detail == "ugoira metadata contains duplicate frame names"
+        ));
+    }
+
+    #[test]
+    fn removes_staging_data_after_a_corrupt_archive() {
+        let root = temp_dir("corrupt");
+        let zip_path = root.join("frames.zip");
+        fs::write(&zip_path, b"not-a-zip").unwrap();
+        let result = prepare(
+            &zip_path,
+            &root.join("cache"),
+            vec![UgoiraFrame {
+                file: "000.jpg".into(),
+                delay_millis: 20,
+            }],
+        );
+        assert!(matches!(result, Err(ApiError::InvalidRequest { .. })));
+        assert!(fs::read_dir(&root).unwrap().all(|entry| {
+            !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .contains(".staging-")
+        }));
         fs::remove_dir_all(root).unwrap();
     }
 }

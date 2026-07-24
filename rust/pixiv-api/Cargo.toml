@@ -6,6 +6,9 @@ edition = "2024"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+bench = []
+
 [dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls", "gzip", "brotli", "deflate"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
@@ -17,7 +20,16 @@ uniffi = { version = "0.29", features = ["cli"] }
 zip = { version = "4", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
+criterion = "0.5"
 tiny_http = "0.12"
 
 [build-dependencies]
 uniffi = { version = "0.29", features = ["build"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+[[bench]]
+name = "illust_decode"
+harness = false

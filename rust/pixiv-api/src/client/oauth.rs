@@ -75,22 +75,31 @@ fn oauth_login(
 ) -> Result<LoginSession, ApiError> {
     fields.push(("client_id", CLIENT_ID.into()));
     fields.push(("client_secret", CLIENT_SECRET.into()));
-    let response = transport::send_text(
+    let payload = transport::send_json::<OAuthPayload>(
         client
             .client
             .post(OAUTH_URL)
             .headers(client.headers.for_request(Default::default())?)
             .form(&fields),
+        "OAuth",
     )?;
-    parse_session(&response.body, fallback_refresh_token)
+    finish_session(payload, fallback_refresh_token)
 }
 
+#[cfg(test)]
 fn parse_session(
     body: &str,
     fallback_refresh_token: Option<&str>,
 ) -> Result<LoginSession, ApiError> {
     let payload: OAuthPayload = serde_json::from_str(body)
         .map_err(|error| invalid_response(format!("invalid OAuth response: {error}")))?;
+    finish_session(payload, fallback_refresh_token)
+}
+
+fn finish_session(
+    payload: OAuthPayload,
+    fallback_refresh_token: Option<&str>,
+) -> Result<LoginSession, ApiError> {
     let response = payload.into_response();
     let refresh_token = response
         .refresh_token

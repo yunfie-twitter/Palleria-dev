@@ -6,6 +6,8 @@ pub enum ApiError {
     Network { detail: String },
     #[error("HTTP {status}: {detail}")]
     Http { status: u16, detail: String },
+    #[error("invalid response: {detail}")]
+    InvalidResponse { detail: String },
 }
 
 pub(crate) fn network_error(error: reqwest::Error) -> ApiError {
@@ -21,9 +23,9 @@ pub(crate) fn invalid_request(detail: impl Into<String>) -> ApiError {
 }
 
 pub(crate) fn invalid_response(detail: impl Into<String>) -> ApiError {
-    // Keep the public UniFFI error surface stable while distinguishing response
-    // failures at their call sites and in their messages.
-    invalid_request(detail)
+    ApiError::InvalidResponse {
+        detail: detail.into(),
+    }
 }
 
 pub(crate) fn io_error(context: &str, error: std::io::Error) -> ApiError {
