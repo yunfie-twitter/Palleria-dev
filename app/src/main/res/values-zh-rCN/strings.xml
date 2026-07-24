@@ -402,9 +402,12 @@
     <string name="login_no_account">没有帐户</string>
     <string name="login_title">登录</string>
     <string name="login_disclaimer">此应用程序与 Pixiv 没有任何关联。</string>
-    <string name="login_web_button">Pixiv 网页登录</string>
+    <string name="login_web_button">登录</string>
     <string name="login_web_description">最稳定的登录路径，直接在浏览器中进行身份验证。</string>
     <string name="login_terms">服务条款</string>
+    <string name="login_or">或者</string>
+    <string name="login_details">详情</string>
+    <string name="login_token_short">Token</string>
     <string name="login_token_title">刷新令牌登录</string>
     <string name="login_token_description">粘贴现有刷新令牌以快速登录。</string>
     <string name="login_token_button">使用刷新令牌登录</string>

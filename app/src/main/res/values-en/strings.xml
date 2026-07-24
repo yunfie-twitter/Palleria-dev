@@ -443,9 +443,12 @@
     <string name="login_no_account">No account</string>
     <string name="login_title">Log In</string>
     <string name="login_disclaimer">This application is not affiliated with Pixiv in any way.</string>
-    <string name="login_web_button">Pixiv Web Login</string>
+    <string name="login_web_button">Log In</string>
     <string name="login_web_description">The most stable login path, authenticating directly in the browser.</string>
     <string name="login_terms">Terms of Service</string>
+    <string name="login_or">or</string>
+    <string name="login_details">Details</string>
+    <string name="login_token_short">Token</string>
     <string name="login_token_title">Refresh Token Login</string>
     <string name="login_token_description">Paste an existing refresh token to log in quickly.</string>
     <string name="login_token_button">Log In with Refresh Token</string>

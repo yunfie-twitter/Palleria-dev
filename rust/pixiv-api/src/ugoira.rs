@@ -2,19 +2,16 @@ use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
 
 use zip::ZipArchive;
 
-use crate::error::ApiError;
+use crate::error::{ApiError, invalid_request, io_error};
 use crate::models::{UgoiraFrame, UgoiraPlayback};
 
 const MAX_ENTRIES: usize = 10_000;
 const MAX_ENTRY_BYTES: u64 = 32 * 1024 * 1024;
 const MAX_TOTAL_BYTES: u64 = 512 * 1024 * 1024;
 const COMPLETE_MARKER: &str = ".complete";
-
-static PREPARE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 pub(crate) fn cached(cache_dir: &Path, frames: &[UgoiraFrame]) -> Option<UgoiraPlayback> {
     validate_frame_names(frames).ok()?;
@@ -26,11 +23,6 @@ pub(crate) fn prepare(
     cache_dir: &Path,
     frames: Vec<UgoiraFrame>,
 ) -> Result<UgoiraPlayback, ApiError> {
-    let _guard = PREPARE_LOCK
-        .get_or_init(|| Mutex::new(()))
-        .lock()
-        .map_err(|_| invalid("ugoira preparation lock is poisoned"))?;
-
     validate_frame_names(&frames)?;
     if cache_is_complete(cache_dir, &frames) {
         return Ok(playback(cache_dir, frames));
@@ -39,15 +31,17 @@ pub(crate) fn prepare(
     let parent = cache_dir
         .parent()
         .ok_or_else(|| invalid("ugoira cache directory has no parent"))?;
-    fs::create_dir_all(parent).map_err(io_error)?;
+    fs::create_dir_all(parent).map_err(|error| io_error("create ugoira cache parent", error))?;
     let staging = staging_path(cache_dir);
     remove_if_exists(&staging)?;
-    fs::create_dir_all(&staging).map_err(io_error)?;
+    fs::create_dir_all(&staging)
+        .map_err(|error| io_error("create ugoira staging directory", error))?;
 
     let result = extract_required(zip_path, &staging, &frames).and_then(|()| {
-        File::create(staging.join(COMPLETE_MARKER)).map_err(io_error)?;
+        File::create(staging.join(COMPLETE_MARKER))
+            .map_err(|error| io_error("create ugoira completion marker", error))?;
         remove_if_exists(cache_dir)?;
-        fs::rename(&staging, cache_dir).map_err(io_error)
+        fs::rename(&staging, cache_dir).map_err(|error| io_error("publish ugoira cache", error))
     });
     if result.is_err() {
         let _ = fs::remove_dir_all(&staging);
@@ -61,7 +55,7 @@ fn extract_required(
     staging: &Path,
     frames: &[UgoiraFrame],
 ) -> Result<(), ApiError> {
-    let file = File::open(zip_path).map_err(io_error)?;
+    let file = File::open(zip_path).map_err(|error| io_error("open ugoira archive", error))?;
     let mut archive = ZipArchive::new(file).map_err(zip_error)?;
     if archive.len() > MAX_ENTRIES {
         return Err(invalid("ugoira archive contains too many entries"));
@@ -96,12 +90,14 @@ fn extract_required(
 
         let target = staging.join(&name);
         if let Some(parent) = target.parent() {
-            fs::create_dir_all(parent).map_err(io_error)?;
+            fs::create_dir_all(parent)
+                .map_err(|error| io_error("create ugoira frame directory", error))?;
         }
-        let mut output = File::create(target).map_err(io_error)?;
+        let mut output =
+            File::create(target).map_err(|error| io_error("create ugoira frame", error))?;
         let expected_size = entry.size();
         let copied = io::copy(&mut entry.by_ref().take(MAX_ENTRY_BYTES + 1), &mut output)
-            .map_err(io_error)?;
+            .map_err(|error| io_error("extract ugoira frame", error))?;
         if copied > MAX_ENTRY_BYTES {
             return Err(invalid("ugoira frame exceeds the size limit"));
         }
@@ -176,23 +172,15 @@ fn staging_path(cache_dir: &Path) -> PathBuf {
 
 fn remove_if_exists(path: &Path) -> Result<(), ApiError> {
     if path.is_dir() {
-        fs::remove_dir_all(path).map_err(io_error)?;
+        fs::remove_dir_all(path).map_err(|error| io_error("remove ugoira directory", error))?;
     } else if path.exists() {
-        fs::remove_file(path).map_err(io_error)?;
+        fs::remove_file(path).map_err(|error| io_error("remove ugoira file", error))?;
     }
     Ok(())
 }
 
 fn invalid(detail: &str) -> ApiError {
-    ApiError::InvalidRequest {
-        detail: detail.into(),
-    }
-}
-
-fn io_error(error: io::Error) -> ApiError {
-    ApiError::Network {
-        detail: error.to_string(),
-    }
+    invalid_request(detail)
 }
 
 fn zip_error(error: zip::result::ZipError) -> ApiError {

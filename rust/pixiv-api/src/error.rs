@@ -14,6 +14,24 @@ pub(crate) fn network_error(error: reqwest::Error) -> ApiError {
     }
 }
 
+pub(crate) fn invalid_request(detail: impl Into<String>) -> ApiError {
+    ApiError::InvalidRequest {
+        detail: detail.into(),
+    }
+}
+
+pub(crate) fn invalid_response(detail: impl Into<String>) -> ApiError {
+    // Keep the public UniFFI error surface stable while distinguishing response
+    // failures at their call sites and in their messages.
+    invalid_request(detail)
+}
+
+pub(crate) fn io_error(context: &str, error: std::io::Error) -> ApiError {
+    ApiError::Network {
+        detail: format!("{context}: {error}"),
+    }
+}
+
 pub(crate) fn http_error(status: u16, body: &str) -> ApiError {
     ApiError::Http {
         status,

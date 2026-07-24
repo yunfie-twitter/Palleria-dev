@@ -116,12 +116,12 @@ internal fun FeedTabContent(
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .background(MiuixTheme.colorScheme.surface),
             contentPadding = PaddingValues(
-                start = 14.dp, end = 14.dp,
-                top = 8.dp,
-                bottom = 24.dp,
+                start = 12.dp, end = 12.dp,
+                top = 12.dp,
+                bottom = 28.dp,
             ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (items.isEmpty() && loadState == LoadState.Loading) {
                 items(6, contentType = { "illust_skeleton" }) { IllustCardSkeleton() }
@@ -206,12 +206,12 @@ internal fun FollowingTabContent(
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .background(MiuixTheme.colorScheme.surface),
             contentPadding = PaddingValues(
-                start = 14.dp, end = 14.dp,
-                top = 8.dp,
-                bottom = 24.dp,
+                start = 12.dp, end = 12.dp,
+                top = 12.dp,
+                bottom = 28.dp,
             ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (items.isEmpty() && loadState == LoadState.Loading) {
                 items(6, contentType = { "illust_skeleton" }) { IllustCardSkeleton() }

@@ -3,7 +3,6 @@ package com.yunfie.illustia
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
-import android.util.Base64
 import androidx.compose.runtime.Immutable
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.lifecycle.AndroidViewModel
@@ -39,8 +38,6 @@ import com.yunfie.illustia.settings.isDynamicColorAvailable
 import com.yunfie.illustia.settings.db.SavedIllustEntity
 import com.yunfie.illustia.settings.db.SavedIllustPageEntity
 import java.util.concurrent.TimeUnit
-import java.security.MessageDigest
-import java.security.SecureRandom
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import coil3.SingletonImageLoader
@@ -1845,7 +1842,7 @@ open class IllustiaViewModelCore(
                     .build()
                 downloadClient.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) throw Exception(str(R.string.error_save_failed) + " (${response.code})")
-                    val body = response.body ?: throw Exception(str(R.string.error_save_failed))
+                    val body = response.body
                     val contentType = body.contentType()?.toString()
                     val file = saveOfflineFile(filename, requestUrl, contentType, body.byteStream())
                     val current = _uiState.value.selectedIllust ?: return@use
@@ -2009,24 +2006,12 @@ open class IllustiaViewModelCore(
 
     private fun buildDownloadPath(filename: String, illust: Illust?): String {
         val settings = _uiState.value.settings
-        val segments = buildList {
-            if (settings.downloadFolderByArtist) {
-                val artistSegment = illust?.artistName
-                    ?.sanitizeDownloadSegment()
-                    ?.takeIf { it.isNotBlank() }
-                    ?: illust?.artistId?.takeIf { it > 0L }?.let { "artist_$it" }
-                if (!artistSegment.isNullOrBlank()) add(artistSegment)
-            }
-            if (settings.downloadFolderByWork) {
-                val workSegment = illust?.title
-                    ?.sanitizeDownloadSegment()
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { title -> illust.idIfPresent()?.let { "${title}_$it" } ?: title }
-                    ?: illust?.idIfPresent()?.let { "work_$it" }
-                if (!workSegment.isNullOrBlank()) add(workSegment)
-            }
-        }
-        return (segments + filename.sanitizeDownloadSegment()).joinToString("/")
+        return buildDownloadPath(
+            filename = filename,
+            illust = illust,
+            groupByArtist = settings.downloadFolderByArtist,
+            groupByWork = settings.downloadFolderByWork,
+        )
     }
 
     private fun saveOfflineFile(
@@ -2037,45 +2022,17 @@ open class IllustiaViewModelCore(
     ): File {
         val dir = settingsStore.savedIllustDir()
         dir.mkdirs()
-        val target = File(dir, filename.withOfflineExtension(sourceUrl, responseMimeType))
+        val target = File(dir, filename.withImageExtension(sourceUrl, responseMimeType))
         input.use { stream ->
             FileOutputStream(target).use { output -> stream.copyTo(output) }
         }
         return target
     }
 
-    private fun String.withOfflineExtension(sourceUrl: String, responseMimeType: String?): String {
-        if (contains('.')) return this
-        val ext = when (responseMimeType?.substringBefore(";")?.lowercase(java.util.Locale.ROOT)) {
-            "image/png" -> "png"
-            "image/jpeg", "image/jpg" -> "jpg"
-            "image/webp" -> "webp"
-            "image/gif" -> "gif"
-            else -> sourceUrl.substringAfterLast('.', "").takeIf { it.length in 2..5 }
-        }
-        return if (ext.isNullOrBlank()) this else "$this.$ext"
-    }
-
     private fun resolveDownloadIllust(filename: String): Illust? {
         return extractIllustId(filename)?.let(::findIllustById)
             ?: _uiState.value.selectedIllust
             ?: _uiState.value.imageViewerIllust
-    }
-
-    private fun extractIllustId(filename: String): Long? {
-        return Regex("""(?:^|[^0-9])illustia_(\d+)""").find(filename)?.groupValues?.getOrNull(1)?.toLongOrNull()
-    }
-
-    private fun Illust?.idIfPresent(): Long? {
-        return this?.id?.takeIf { it > 0L }
-    }
-
-    private fun String.sanitizeDownloadSegment(maxLength: Int = 80): String {
-        val sanitized = trim()
-            .replace(Regex("""[\\/:*?"<>|\u0000-\u001F]"""), "_")
-            .replace(Regex("""\s+"""), " ")
-            .trim(' ', '.')
-        return sanitized.take(maxLength).ifBlank { "untitled" }
     }
 
     private fun downloadImageToGallery(url: String, filename: String) {
@@ -2723,8 +2680,10 @@ open class IllustiaViewModelCore(
                 repository.saveSettings(request.settings)
                 PalleriaAccount.reconcile(getApplication(), request.settings.accounts)
                 if (request.notifyLiveWallpaper) {
-                    getApplication<Application>().sendBroadcast(
-                        Intent(com.yunfie.illustia.wallpaper.PalleriaLiveWallpaperService.ACTION_SETTINGS_CHANGED),
+                    val application = getApplication<Application>()
+                    application.sendBroadcast(
+                        Intent(com.yunfie.illustia.wallpaper.PalleriaLiveWallpaperService.ACTION_SETTINGS_CHANGED)
+                            .setPackage(application.packageName),
                     )
                 }
             } catch (error: Throwable) {
@@ -2780,7 +2739,6 @@ open class IllustiaViewModelCore(
         loadingJob?.cancel()
         recommendedTagsJob?.cancel()
         recommendedTagsExpiryJob?.cancel()
-        super.onCleared()
     }
 
     private fun isCancellation(e: Throwable): Boolean {
@@ -2839,45 +2797,16 @@ open class IllustiaViewModelCore(
     }
 
     private fun snapshotSearchState(): SearchSnapshot {
-        val state = _uiState.value
-        return SearchSnapshot(
-            searchDraft = state.searchDraft,
-            activeSearchWord = state.activeSearchWord,
-            searchItems = state.searchItems,
-            searchNextUrl = state.searchNextUrl,
-            userSearchItems = state.userSearchItems,
-            userSearchNextUrl = state.userSearchNextUrl,
-        )
+        return _uiState.value.toSearchSnapshot()
     }
 
     private fun snapshotUserPageState(): UserPageSnapshot {
-        val state = _uiState.value
-        return UserPageSnapshot(
-            selectedUser = state.selectedUser,
-            selectedUserIllusts = state.selectedUserIllusts,
-            selectedUserNextUrl = state.selectedUserNextUrl,
-            selectedUserBookmarks = state.selectedUserBookmarks,
-            selectedUserBookmarksNextUrl = state.selectedUserBookmarksNextUrl,
-            showUserPage = state.showUserPage,
-            userPageFromSheet = state.userPageFromSheet,
-            userPageDismissed = state.userPageDismissed,
-        )
+        return _uiState.value.toUserPageSnapshot()
     }
 
     private fun restoreUserPageSnapshot() {
         val snapshot = userPageSnapshot ?: return
-        _uiState.update {
-            it.copy(
-                selectedUser = snapshot.selectedUser,
-                selectedUserIllusts = snapshot.selectedUserIllusts,
-                selectedUserNextUrl = snapshot.selectedUserNextUrl,
-                selectedUserBookmarks = snapshot.selectedUserBookmarks,
-                selectedUserBookmarksNextUrl = snapshot.selectedUserBookmarksNextUrl,
-                showUserPage = snapshot.showUserPage,
-                userPageFromSheet = snapshot.userPageFromSheet,
-                userPageDismissed = snapshot.userPageDismissed,
-            )
-        }
+        _uiState.update { it.restore(snapshot) }
     }
 
     private suspend fun loadRecommendedTagImage(tag: String): String? {
@@ -2941,55 +2870,7 @@ open class IllustiaViewModelCore(
 
     private fun updateIllustEverywhere(updated: Illust) {
         viewModelScope.launch(Dispatchers.Default) {
-            _uiState.update { state ->
-                val newHome = state.homeItems.replaceIllustIfPresent(updated)
-                val newSearch = state.searchItems.replaceIllustIfPresent(updated)
-                val newTimeline = state.timelineItems.replaceIllustIfPresent(updated)
-                val newShortsFeed = state.shortsFeedItems.replaceIllustIfPresent(updated)
-                val newWatchlist = state.watchlistItems.replaceIllustIfPresent(updated)
-                val newRanking = state.rankingItems.replaceIllustIfPresent(updated)
-                val newRelated = state.relatedIllusts.replaceIllustIfPresent(updated)
-                val newHistory = state.settings.viewHistory.replaceIllustIfPresent(updated)
-                val newBookmarks = if (updated.isBookmarked) {
-                    state.bookmarkItems.replaceOrAppend(updated)
-                } else {
-                    state.bookmarkItems.removeIllustIfPresent(updated.id)
-                }
-                val newUserIllusts = state.selectedUserIllusts.replaceIllustIfPresent(updated)
-                val newUserBookmarks = state.selectedUserBookmarks.replaceIllustIfPresent(updated)
-                val newSelected = if (state.selectedIllust?.id == updated.id) updated else state.selectedIllust
-
-                if (newHome === state.homeItems &&
-                    newSearch === state.searchItems &&
-                    newTimeline === state.timelineItems &&
-                    newShortsFeed === state.shortsFeedItems &&
-                    newWatchlist === state.watchlistItems &&
-                    newRanking === state.rankingItems &&
-                    newRelated === state.relatedIllusts &&
-                    newHistory === state.settings.viewHistory &&
-                    newBookmarks === state.bookmarkItems &&
-                    newUserIllusts === state.selectedUserIllusts &&
-                    newUserBookmarks === state.selectedUserBookmarks &&
-                    newSelected === state.selectedIllust
-                ) {
-                    state
-                } else {
-                    state.copy(
-                        homeItems = newHome,
-                        searchItems = newSearch,
-                        timelineItems = newTimeline,
-                        shortsFeedItems = newShortsFeed,
-                        watchlistItems = newWatchlist,
-                        rankingItems = newRanking,
-                        relatedIllusts = newRelated,
-                        settings = state.settings.copy(viewHistory = newHistory),
-                        bookmarkItems = newBookmarks,
-                        selectedUserIllusts = newUserIllusts,
-                        selectedUserBookmarks = newUserBookmarks,
-                        selectedIllust = newSelected,
-                    )
-                }
-            }
+            _uiState.update { it.withUpdatedIllust(updated) }
         }
     }
 
@@ -3014,15 +2895,6 @@ open class IllustiaViewModelCore(
         if (next.isEmpty()) return this
         val existing = asSequence().map { it.id }.toHashSet()
         return this + next.filter { existing.add(it.id) }
-    }
-
-    private fun Illust.hasImageUrl(url: String): Boolean {
-        return imageUrl == url ||
-                mediumImageUrl == url ||
-                originalImageUrl == url ||
-                mediumImagePages.any { it == url } ||
-                imagePages.any { it == url } ||
-                originalImagePages.any { it == url }
     }
 
     private fun removeMutedFromVisibleLists() {

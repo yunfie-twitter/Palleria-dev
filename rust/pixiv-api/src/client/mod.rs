@@ -1,27 +1,38 @@
+mod endpoints;
 mod oauth;
+mod transport;
+mod ugoira_download;
 
 use std::collections::HashMap;
-use std::fs::{self, File};
-use std::io::{Read, Write};
 use std::net::SocketAddr;
-use std::path::Path;
-use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use reqwest::blocking::Client;
-use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 
 use crate::config::{ECH_HOSTS, ECH_IPS};
-use crate::error::{ApiError, http_error, network_error};
+use crate::error::{ApiError, invalid_request, network_error};
 use crate::headers::PixivHeaders;
 use crate::models::{
-    ApiResponse, Illust, IllustDetailResponse, IllustPage, IllustPageResponse, LoginSession,
-    UgoiraFrame, UgoiraPlayback, UserDetailResponse, UserProfile,
+    ApiResponse, Illust, IllustPage, LoginSession, UgoiraFrame, UgoiraPlayback, UserProfile,
 };
-use crate::ugoira;
 
-static UGOIRA_DOWNLOAD_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-const MAX_UGOIRA_ARCHIVE_BYTES: u64 = 512 * 1024 * 1024;
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum NetworkMode {
+    Standard,
+    Compat,
+    Ech,
+}
+
+impl NetworkMode {
+    fn parse(value: &str) -> Result<Self, ApiError> {
+        match value {
+            "standard" => Ok(Self::Standard),
+            "compat" => Ok(Self::Compat),
+            "ech" => Ok(Self::Ech),
+            _ => Err(invalid_request(format!("unknown network mode: {value}"))),
+        }
+    }
+}
 
 #[derive(uniffi::Object)]
 pub struct PixivHttpClient {
@@ -38,6 +49,7 @@ impl PixivHttpClient {
         app_os_version: String,
         accept_language: String,
     ) -> Result<Self, ApiError> {
+        let network_mode = NetworkMode::parse(&network_mode)?;
         let mut builder = Client::builder()
             .connect_timeout(Duration::from_secs(12))
             .timeout(Duration::from_secs(30))
@@ -45,15 +57,12 @@ impl PixivHttpClient {
             .pool_idle_timeout(Duration::from_secs(300))
             .tcp_keepalive(Duration::from_secs(60));
 
-        if network_mode == "ech" {
+        if network_mode == NetworkMode::Ech {
             for host in ECH_HOSTS {
                 for ip in ECH_IPS {
-                    let address: SocketAddr =
-                        format!("{ip}:443")
-                            .parse()
-                            .map_err(|error| ApiError::InvalidRequest {
-                                detail: format!("invalid compatible endpoint: {error}"),
-                            })?;
+                    let address: SocketAddr = format!("{ip}:443").parse().map_err(|error| {
+                        invalid_request(format!("invalid compatible endpoint: {error}"))
+                    })?;
                     builder = builder.resolve(host, address);
                 }
             }
@@ -96,46 +105,7 @@ impl PixivHttpClient {
         body: Vec<u8>,
         content_type: Option<String>,
     ) -> Result<ApiResponse, ApiError> {
-        let method = reqwest::Method::from_bytes(method.as_bytes()).map_err(|error| {
-            ApiError::InvalidRequest {
-                detail: format!("invalid HTTP method: {error}"),
-            }
-        })?;
-        let mut header_map = HeaderMap::with_capacity(headers.len() + 9);
-        for (name, value) in headers {
-            let name = HeaderName::from_bytes(name.as_bytes()).map_err(|error| {
-                ApiError::InvalidRequest {
-                    detail: format!("invalid header name: {error}"),
-                }
-            })?;
-            let value =
-                HeaderValue::from_str(&value).map_err(|error| ApiError::InvalidRequest {
-                    detail: format!("invalid header value: {error}"),
-                })?;
-            header_map.append(name, value);
-        }
-        if let Some(value) = content_type {
-            let value =
-                HeaderValue::from_str(&value).map_err(|error| ApiError::InvalidRequest {
-                    detail: format!("invalid content type: {error}"),
-                })?;
-            header_map.insert(CONTENT_TYPE, value);
-        }
-
-        let mut request = self
-            .client
-            .request(method, &url)
-            .headers(self.headers.for_request(header_map)?);
-        if !body.is_empty() {
-            request = request.body(body);
-        }
-        let response = request.send().map_err(network_error)?;
-        let status = response.status().as_u16();
-        let body = response.text().map_err(network_error)?;
-        if !(200..300).contains(&status) {
-            return Err(http_error(status, &body));
-        }
-        Ok(ApiResponse { status, body })
+        transport::execute(self, method, url, headers, body, content_type)
     }
 
     pub fn execute_illust_page(
@@ -147,11 +117,7 @@ impl PixivHttpClient {
         content_type: Option<String>,
     ) -> Result<IllustPage, ApiError> {
         let response = self.execute(method, url, headers, body, content_type)?;
-        serde_json::from_str::<IllustPageResponse>(&response.body)
-            .map(IllustPageResponse::into_page)
-            .map_err(|error| ApiError::InvalidRequest {
-                detail: format!("invalid illust page response: {error}"),
-            })
+        endpoints::illust_page(&response.body)
     }
 
     pub fn execute_illust_detail(
@@ -163,14 +129,7 @@ impl PixivHttpClient {
         content_type: Option<String>,
     ) -> Result<Illust, ApiError> {
         let response = self.execute(method, url, headers, body, content_type)?;
-        serde_json::from_str::<IllustDetailResponse>(&response.body)
-            .map_err(|error| ApiError::InvalidRequest {
-                detail: format!("invalid illust detail response: {error}"),
-            })?
-            .into_illust()
-            .ok_or_else(|| ApiError::InvalidRequest {
-                detail: "illust detail response does not contain a valid illust".into(),
-            })
+        endpoints::illust_detail(&response.body)
     }
 
     pub fn execute_user_profile(
@@ -183,11 +142,7 @@ impl PixivHttpClient {
         fallback_user_id: i64,
     ) -> Result<UserProfile, ApiError> {
         let response = self.execute(method, url, headers, body, content_type)?;
-        serde_json::from_str::<UserDetailResponse>(&response.body)
-            .map(|value| value.into_profile(fallback_user_id))
-            .map_err(|error| ApiError::InvalidRequest {
-                detail: format!("invalid user detail response: {error}"),
-            })
+        endpoints::user_profile(&response.body, fallback_user_id)
     }
 
     pub fn prepare_ugoira(
@@ -197,91 +152,13 @@ impl PixivHttpClient {
         cache_dir: String,
         frames: Vec<UgoiraFrame>,
     ) -> Result<UgoiraPlayback, ApiError> {
-        let _guard = UGOIRA_DOWNLOAD_LOCK
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .map_err(|_| ApiError::InvalidRequest {
-                detail: "ugoira download lock is poisoned".into(),
-            })?;
-        let cache_dir = Path::new(&cache_dir);
-        if let Some(playback) = ugoira::cached(cache_dir, &frames) {
-            return Ok(playback);
-        }
-
-        let mut header_map = HeaderMap::with_capacity(headers.len() + 9);
-        for (name, value) in headers {
-            let name = HeaderName::from_bytes(name.as_bytes()).map_err(|error| {
-                ApiError::InvalidRequest {
-                    detail: format!("invalid header name: {error}"),
-                }
-            })?;
-            let value =
-                HeaderValue::from_str(&value).map_err(|error| ApiError::InvalidRequest {
-                    detail: format!("invalid header value: {error}"),
-                })?;
-            header_map.append(name, value);
-        }
-
-        let mut response = self
-            .client
-            .get(&url)
-            .headers(self.headers.for_request(header_map)?)
-            .send()
-            .map_err(network_error)?;
-        let status = response.status().as_u16();
-        if !(200..300).contains(&status) {
-            let body = response.text().map_err(network_error)?;
-            return Err(http_error(status, &body));
-        }
-
-        let parent = cache_dir.parent().ok_or_else(|| ApiError::InvalidRequest {
-            detail: "ugoira cache directory has no parent".into(),
-        })?;
-        fs::create_dir_all(parent).map_err(file_error)?;
-        let zip_path = cache_dir.with_extension("zip.download");
-        let result = (|| {
-            if response
-                .content_length()
-                .is_some_and(|length| length > MAX_UGOIRA_ARCHIVE_BYTES)
-            {
-                return Err(ApiError::InvalidRequest {
-                    detail: "ugoira archive exceeds the download limit".into(),
-                });
-            }
-            let mut output = File::create(&zip_path).map_err(file_error)?;
-            copy_with_limit(&mut response, &mut output, MAX_UGOIRA_ARCHIVE_BYTES)?;
-            output.flush().map_err(file_error)?;
-            ugoira::prepare(&zip_path, cache_dir, frames)
-        })();
-        let _ = fs::remove_file(zip_path);
-        result
-    }
-}
-
-fn copy_with_limit(
-    reader: &mut impl Read,
-    writer: &mut impl Write,
-    limit: u64,
-) -> Result<u64, ApiError> {
-    let copied = std::io::copy(&mut reader.take(limit + 1), writer).map_err(file_error)?;
-    if copied > limit {
-        return Err(ApiError::InvalidRequest {
-            detail: "ugoira archive exceeds the download limit".into(),
-        });
-    }
-    Ok(copied)
-}
-
-fn file_error(error: std::io::Error) -> ApiError {
-    ApiError::Network {
-        detail: error.to_string(),
+        ugoira_download::prepare(self, url, headers, cache_dir, frames)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
     use std::thread;
 
     fn client() -> PixivHttpClient {
@@ -292,6 +169,21 @@ mod tests {
             "en-US".into(),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn rejects_an_unknown_network_mode() {
+        let result = PixivHttpClient::new(
+            "unknown".into(),
+            "test".into(),
+            "Android 10".into(),
+            "en-US".into(),
+        );
+
+        assert!(matches!(
+            result,
+            Err(ApiError::InvalidRequest { detail }) if detail == "unknown network mode: unknown"
+        ));
     }
 
     fn server(status: u16, body: &'static str) -> String {
@@ -334,32 +226,6 @@ mod tests {
             )
             .unwrap_err();
         assert!(matches!(error, ApiError::Http { status: 403, detail } if detail == "denied"));
-    }
-
-    #[test]
-    fn copies_a_response_within_the_archive_limit() {
-        let mut input = Cursor::new(b"ugoira".to_vec());
-        let mut output = Vec::new();
-
-        let copied = copy_with_limit(&mut input, &mut output, 6).unwrap();
-
-        assert_eq!(copied, 6);
-        assert_eq!(output, b"ugoira");
-    }
-
-    #[test]
-    fn rejects_a_response_that_exceeds_the_archive_limit() {
-        let mut input = Cursor::new(b"oversized".to_vec());
-        let mut output = Vec::new();
-
-        let error = copy_with_limit(&mut input, &mut output, 4).unwrap_err();
-
-        assert!(matches!(
-            error,
-            ApiError::InvalidRequest { detail }
-                if detail == "ugoira archive exceeds the download limit"
-        ));
-        assert_eq!(output.len(), 5);
     }
 
     #[test]

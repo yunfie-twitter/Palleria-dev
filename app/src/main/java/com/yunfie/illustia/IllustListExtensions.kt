@@ -42,6 +42,57 @@ internal fun IllustiaUiState.withSettings(settings: AppSettings): IllustiaUiStat
     )
 }
 
+internal fun IllustiaUiState.withUpdatedIllust(updated: Illust): IllustiaUiState {
+    val updatedHome = homeItems.replaceIllustIfPresent(updated)
+    val updatedSearch = searchItems.replaceIllustIfPresent(updated)
+    val updatedTimeline = timelineItems.replaceIllustIfPresent(updated)
+    val updatedShortsFeed = shortsFeedItems.replaceIllustIfPresent(updated)
+    val updatedWatchlist = watchlistItems.replaceIllustIfPresent(updated)
+    val updatedRanking = rankingItems.replaceIllustIfPresent(updated)
+    val updatedRelated = relatedIllusts.replaceIllustIfPresent(updated)
+    val updatedHistory = settings.viewHistory.replaceIllustIfPresent(updated)
+    val updatedBookmarks = if (updated.isBookmarked) {
+        bookmarkItems.replaceOrAppend(updated)
+    } else {
+        bookmarkItems.removeIllustIfPresent(updated.id)
+    }
+    val updatedUserIllusts = selectedUserIllusts.replaceIllustIfPresent(updated)
+    val updatedUserBookmarks = selectedUserBookmarks.replaceIllustIfPresent(updated)
+    val updatedSelected = if (selectedIllust?.id == updated.id) updated else selectedIllust
+
+    if (
+        updatedHome === homeItems &&
+        updatedSearch === searchItems &&
+        updatedTimeline === timelineItems &&
+        updatedShortsFeed === shortsFeedItems &&
+        updatedWatchlist === watchlistItems &&
+        updatedRanking === rankingItems &&
+        updatedRelated === relatedIllusts &&
+        updatedHistory === settings.viewHistory &&
+        updatedBookmarks === bookmarkItems &&
+        updatedUserIllusts === selectedUserIllusts &&
+        updatedUserBookmarks === selectedUserBookmarks &&
+        updatedSelected === selectedIllust
+    ) {
+        return this
+    }
+
+    return copy(
+        homeItems = updatedHome,
+        searchItems = updatedSearch,
+        timelineItems = updatedTimeline,
+        shortsFeedItems = updatedShortsFeed,
+        watchlistItems = updatedWatchlist,
+        rankingItems = updatedRanking,
+        relatedIllusts = updatedRelated,
+        settings = settings.copy(viewHistory = updatedHistory),
+        bookmarkItems = updatedBookmarks,
+        selectedUserIllusts = updatedUserIllusts,
+        selectedUserBookmarks = updatedUserBookmarks,
+        selectedIllust = updatedSelected,
+    )
+}
+
 internal fun List<Illust>.visibleWith(filter: MuteFilter): List<Illust> {
     if (filter.isEmpty) {
         return this

@@ -1,6 +1,9 @@
+use serde::Deserialize;
+
 use crate::client::PixivHttpClient;
+use crate::client::transport;
 use crate::config::{CLIENT_ID, CLIENT_SECRET, OAUTH_URL, REDIRECT_URI};
-use crate::error::{ApiError, http_error, network_error};
+use crate::error::{ApiError, invalid_request, invalid_response};
 use crate::models::LoginSession;
 
 pub(super) fn login_with_refresh_token(
@@ -9,9 +12,7 @@ pub(super) fn login_with_refresh_token(
 ) -> Result<LoginSession, ApiError> {
     let token = refresh_token.trim();
     if token.is_empty() {
-        return Err(ApiError::InvalidRequest {
-            detail: "refresh token is empty".into(),
-        });
+        return Err(invalid_request("refresh token is empty"));
     }
     oauth_login(
         client,
@@ -29,6 +30,12 @@ pub(super) fn login_with_authorization_code(
     code: String,
     code_verifier: String,
 ) -> Result<LoginSession, ApiError> {
+    if code.trim().is_empty() {
+        return Err(invalid_request("authorization code is empty"));
+    }
+    if code_verifier.trim().is_empty() {
+        return Err(invalid_request("authorization code verifier is empty"));
+    }
     oauth_login(
         client,
         vec![
@@ -68,52 +75,98 @@ fn oauth_login(
 ) -> Result<LoginSession, ApiError> {
     fields.push(("client_id", CLIENT_ID.into()));
     fields.push(("client_secret", CLIENT_SECRET.into()));
-    let response = client
-        .client
-        .post(OAUTH_URL)
-        .headers(client.headers.for_request(Default::default())?)
-        .form(&fields)
-        .send()
-        .map_err(network_error)?;
-    let status = response.status().as_u16();
-    let body = response.text().map_err(network_error)?;
-    if !(200..300).contains(&status) {
-        return Err(http_error(status, &body));
-    }
-    parse_session(&body, fallback_refresh_token)
+    let response = transport::send_text(
+        client
+            .client
+            .post(OAUTH_URL)
+            .headers(client.headers.for_request(Default::default())?)
+            .form(&fields),
+    )?;
+    parse_session(&response.body, fallback_refresh_token)
 }
 
 fn parse_session(
     body: &str,
     fallback_refresh_token: Option<&str>,
 ) -> Result<LoginSession, ApiError> {
-    let root: serde_json::Value =
-        serde_json::from_str(body).map_err(|error| ApiError::InvalidRequest {
-            detail: format!("invalid OAuth response: {error}"),
-        })?;
-    let response = root.get("response").unwrap_or(&root);
-    let access_token = response
-        .get("access_token")
-        .and_then(|value| value.as_str())
-        .ok_or_else(|| ApiError::InvalidRequest {
-            detail: "OAuth response has no access token".into(),
-        })?
-        .into();
+    let payload: OAuthPayload = serde_json::from_str(body)
+        .map_err(|error| invalid_response(format!("invalid OAuth response: {error}")))?;
+    let response = payload.into_response();
     let refresh_token = response
-        .get("refresh_token")
-        .and_then(|value| value.as_str())
-        .or(fallback_refresh_token)
-        .ok_or_else(|| ApiError::InvalidRequest {
-            detail: "OAuth response has no refresh token".into(),
-        })?
-        .into();
-    let user_id = response
-        .get("user")
-        .and_then(|user| user.get("id"))
-        .and_then(|id| id.as_u64().or_else(|| id.as_str()?.parse().ok()));
+        .refresh_token
+        .or_else(|| fallback_refresh_token.map(str::to_owned))
+        .ok_or_else(|| invalid_response("OAuth response has no refresh token"))?;
     Ok(LoginSession {
-        access_token,
+        access_token: response.access_token,
         refresh_token,
-        user_id,
+        user_id: response.user.and_then(|user| user.id?.into_u64()),
     })
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum OAuthPayload {
+    Wrapped { response: OAuthResponse },
+    Direct(OAuthResponse),
+}
+
+impl OAuthPayload {
+    fn into_response(self) -> OAuthResponse {
+        match self {
+            Self::Wrapped { response } | Self::Direct(response) => response,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct OAuthResponse {
+    access_token: String,
+    refresh_token: Option<String>,
+    user: Option<OAuthUser>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OAuthUser {
+    id: Option<OAuthUserId>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum OAuthUserId {
+    Integer(u64),
+    Text(String),
+}
+
+impl OAuthUserId {
+    fn into_u64(self) -> Option<u64> {
+        match self {
+            Self::Integer(id) => Some(id),
+            Self::Text(id) => id.parse().ok(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_wrapped_oauth_response_with_string_user_id() {
+        let session = parse_session(
+            r#"{"response":{"access_token":"access","refresh_token":"refresh","user":{"id":"42"}}}"#,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(session.access_token, "access");
+        assert_eq!(session.refresh_token, "refresh");
+        assert_eq!(session.user_id, Some(42));
+    }
+
+    #[test]
+    fn uses_fallback_refresh_token_for_direct_response() {
+        let session = parse_session(r#"{"access_token":"access"}"#, Some("fallback")).unwrap();
+
+        assert_eq!(session.refresh_token, "fallback");
+    }
 }

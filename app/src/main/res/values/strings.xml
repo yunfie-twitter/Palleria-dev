@@ -448,9 +448,12 @@
     <string name="login_no_account">アカウントをお持ちではありませんか？</string>
     <string name="login_title">ログイン</string>
     <string name="login_disclaimer">このアプリケーションはPixiv公式とは一切関係ありません</string>
-    <string name="login_web_button">Pixiv Webログイン</string>
+    <string name="login_web_button">ログイン</string>
     <string name="login_web_description">ブラウザでそのまま認証する、もっとも安定したログイン方法です。</string>
     <string name="login_terms">利用規約</string>
+    <string name="login_or">または</string>
+    <string name="login_details">詳細</string>
+    <string name="login_token_short">Token</string>
     <string name="login_token_title">Refresh Tokenログイン</string>
     <string name="login_token_description">既に発行済みの refresh token を貼り付けて、すばやくログインします。</string>
     <string name="login_token_button">Refresh Tokenでログイン</string>

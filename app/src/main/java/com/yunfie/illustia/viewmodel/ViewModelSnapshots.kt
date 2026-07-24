@@ -31,3 +31,40 @@ internal data class UserPageSnapshot(
     val userPageFromSheet: Boolean,
     val userPageDismissed: Boolean,
 )
+
+internal fun IllustiaUiState.toSearchSnapshot(): SearchSnapshot {
+    return SearchSnapshot(
+        searchDraft = searchDraft,
+        activeSearchWord = activeSearchWord,
+        searchItems = searchItems,
+        searchNextUrl = searchNextUrl,
+        userSearchItems = userSearchItems,
+        userSearchNextUrl = userSearchNextUrl,
+    )
+}
+
+internal fun IllustiaUiState.toUserPageSnapshot(): UserPageSnapshot {
+    return UserPageSnapshot(
+        selectedUser = selectedUser,
+        selectedUserIllusts = selectedUserIllusts,
+        selectedUserNextUrl = selectedUserNextUrl,
+        selectedUserBookmarks = selectedUserBookmarks,
+        selectedUserBookmarksNextUrl = selectedUserBookmarksNextUrl,
+        showUserPage = showUserPage,
+        userPageFromSheet = userPageFromSheet,
+        userPageDismissed = userPageDismissed,
+    )
+}
+
+internal fun IllustiaUiState.restore(snapshot: UserPageSnapshot): IllustiaUiState {
+    return copy(
+        selectedUser = snapshot.selectedUser,
+        selectedUserIllusts = snapshot.selectedUserIllusts,
+        selectedUserNextUrl = snapshot.selectedUserNextUrl,
+        selectedUserBookmarks = snapshot.selectedUserBookmarks,
+        selectedUserBookmarksNextUrl = snapshot.selectedUserBookmarksNextUrl,
+        showUserPage = snapshot.showUserPage,
+        userPageFromSheet = snapshot.userPageFromSheet,
+        userPageDismissed = snapshot.userPageDismissed,
+    )
+}
