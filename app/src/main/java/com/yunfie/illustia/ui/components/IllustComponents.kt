@@ -187,15 +187,10 @@ private fun IllustCardImpl(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val hapticMode = LocalAppHapticMode.current
-    val cardShape = RoundedCornerShape(12.dp)
     val cardModifier = if (isSelected) {
-        modifier.border(2.dp, MiuixTheme.colorScheme.primary, cardShape)
+        modifier.border(2.dp, MiuixTheme.colorScheme.primary, RoundedCornerShape(14.dp))
     } else {
-        modifier.border(
-            0.75.dp,
-            MiuixTheme.colorScheme.outline.copy(alpha = 0.38f),
-            cardShape,
-        )
+        modifier
     }
     Card(
         modifier = cardModifier.combinedClickable(
@@ -207,16 +202,13 @@ private fun IllustCardImpl(
                     }
                 } else null
             ),
-        cornerRadius = 12.dp,
+        cornerRadius = 14.dp,
         insideMargin = PaddingValues(0.dp),
-        colors = CardDefaults.defaultColors(
-            color = MiuixTheme.colorScheme.surfaceContainer,
-            contentColor = MiuixTheme.colorScheme.onBackground,
-        ),
+        colors = CardDefaults.defaultColors(color = Color.Transparent, contentColor = MiuixTheme.colorScheme.onBackground),
         pressFeedbackType = PressFeedbackType.Sink,
     ) {
         Box {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
                 IllustCardThumbnail(
                     previewUrl = previewUrl,
@@ -272,7 +264,7 @@ private fun IllustCardThumbnail(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.75f)
-            .squircleSurface(MiuixTheme.colorScheme.surfaceContainerHigh, 10.dp),
+            .squircleSurface(MiuixTheme.colorScheme.surfaceContainer, 14.dp),
     ) {
         Box(modifier = Modifier.fillMaxSize().then(if (isMutedByTag) Modifier.blur(12.dp) else Modifier)) {
             PixivImage(
@@ -311,14 +303,14 @@ private fun IllustCardInfo(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp)
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text(
                 text = title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = MiuixTheme.colorScheme.onBackground,
                 style = MiuixTheme.textStyles.subtitle,
             )
