@@ -1,26 +1,33 @@
 package com.yunfie.illustia.ui.screens
 
+import android.app.Activity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import com.yunfie.illustia.IllustiaUiState
 import com.yunfie.illustia.IllustiaViewModel
 import com.yunfie.illustia.R
+import com.yunfie.illustia.settings.isAppDarkTheme
 import com.yunfie.illustia.ui.components.miuixClickable
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -39,8 +46,27 @@ fun OnboardingScreen(
     onTokenLoginDismiss: () -> Unit = {},
 ) {
     var showDetails by remember { mutableStateOf(false) }
-    val backgroundColor = MiuixTheme.colorScheme.primary
-    val contentColor = MiuixTheme.colorScheme.onPrimary
+    val backgroundColor = Color.Black
+    val contentColor = Color.White
+    val activity = LocalContext.current as? Activity
+    val restoreLightSystemBars = !isAppDarkTheme(
+        state.settings.themeMode,
+        isSystemInDarkTheme(),
+    )
+
+    DisposableEffect(activity, restoreLightSystemBars) {
+        val window = activity?.window
+        val controller = window?.let {
+            WindowCompat.getInsetsController(it, it.decorView)
+        }
+        controller?.isAppearanceLightStatusBars = false
+        controller?.isAppearanceLightNavigationBars = false
+
+        onDispose {
+            controller?.isAppearanceLightStatusBars = restoreLightSystemBars
+            controller?.isAppearanceLightNavigationBars = restoreLightSystemBars
+        }
+    }
 
     Scaffold(containerColor = backgroundColor) { scaffoldPadding ->
         Column(
@@ -54,15 +80,14 @@ fun OnboardingScreen(
                     bottom = scaffoldPadding.calculateBottomPadding() + 18.dp,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             BrandLockup(
                 contentColor = contentColor,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 54.dp),
+                modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(72.dp))
 
             LoginActions(
                 backgroundColor = backgroundColor,
@@ -115,19 +140,22 @@ private fun BrandLockup(
     contentColor: Color,
     modifier: Modifier = Modifier,
 ) {
+    val appName = stringResource(R.string.app_name)
+
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
-            painter = painterResource(R.drawable.ic_launcher_foreground),
+            painter = painterResource(R.drawable.onboarding_app_icon),
             contentDescription = null,
-            colorFilter = ColorFilter.tint(contentColor),
-            modifier = Modifier.size(92.dp),
+            modifier = Modifier
+                .size(60.dp)
+                .clip(RoundedCornerShape(17.dp)),
         )
         Text(
-            text = stringResource(R.string.app_name),
+            text = appName,
             color = contentColor,
             fontSize = 48.sp,
             lineHeight = 52.sp,
